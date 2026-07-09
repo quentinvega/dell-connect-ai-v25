@@ -1,0 +1,2281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dell Connect AI</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<style>
+  :root{
+    --blue:#0076CE;
+    --blue-dark:#00579B;
+    --bg:#F5F7FB;
+    --card:#FFFFFF;
+    --accent:#EAF3FF;
+    --ink:#1B2430;
+    --ink-soft:#5B6675;
+    --border:#E3E9F2;
+    --green:#1E9E6B;
+    --amber:#C77700;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(16,24,40,.04), 0 2px 8px rgba(16,24,40,.05);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+
+  .app{display:flex;min-height:100vh;}
+
+  /* SIDEBAR */
+  .sidebar{
+    width:250px;flex-shrink:0;background:linear-gradient(180deg,var(--blue) 0%, var(--blue-dark) 100%);
+    color:#fff;padding:24px 16px;position:sticky;top:0;height:100vh;overflow-y:auto;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding:0 8px 20px 8px;border-bottom:1px solid rgba(255,255,255,.18);margin-bottom:18px;}
+  .brand-mark{width:34px;height:34px;border-radius:9px;background:#fff;color:var(--blue);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;letter-spacing:-.5px;}
+  .brand-text{line-height:1.15;}
+  .brand-text strong{display:block;font-size:15px;}
+  .brand-text span{display:block;font-size:11px;color:rgba(255,255,255,.75);}
+
+  .nav-item{
+    display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;color:rgba(255,255,255,.85);
+    font-size:14px;font-weight:500;margin-bottom:2px;transition:background .15s ease;user-select:none;
+  }
+  .nav-item .ic{width:20px;text-align:center;font-size:15px;}
+  .nav-item:hover{background:rgba(255,255,255,.10);color:#fff;}
+  .nav-item.active{background:rgba(255,255,255,.18);color:#fff;}
+
+  .sidebar-footer{margin-top:24px;padding:14px;background:rgba(255,255,255,.10);border-radius:12px;font-size:12px;color:rgba(255,255,255,.85);line-height:1.5;}
+
+  /* MAIN */
+  .main{flex:1;min-width:0;padding:28px 34px 60px 34px;}
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;gap:20px;flex-wrap:wrap;}
+  .page-title{font-size:22px;font-weight:700;margin:0 0 4px 0;}
+  .page-sub{color:var(--ink-soft);font-size:13.5px;margin:0;max-width:640px;}
+  .pill{background:var(--accent);color:var(--blue-dark);font-size:12px;font-weight:600;padding:6px 12px;border-radius:999px;white-space:nowrap;}
+
+  .section{display:none;}
+  .section.active{display:block;animation:fadein .25s ease;}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;}
+  .card + .card{margin-top:18px;}
+  .card-title{font-size:15px;font-weight:700;margin:0 0 4px 0;}
+  .card-sub{font-size:12.5px;color:var(--ink-soft);margin:0 0 16px 0;}
+
+  .grid{display:grid;gap:16px;}
+  .grid-2{grid-template-columns:1fr 1fr;}
+  .grid-3{grid-template-columns:1fr 1fr 1fr;}
+  .grid-4{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:1000px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr 1fr;}}
+  @media(max-width:640px){.grid-2,.grid-3,.grid-4{grid-template-columns:1fr;} .sidebar{display:none;} .main{padding:18px;}}
+
+  .field label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:6px;}
+  .field input, .field select{
+    width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:9px;font-size:13.5px;background:#FBFCFE;color:var(--ink);
+  }
+  .field input:focus, .field select:focus, .search-input:focus{outline:2px solid var(--blue);outline-offset:1px;}
+  .field input::placeholder, .search-input::placeholder{color:#B4BECC;opacity:1;}
+
+  .btn{border:none;border-radius:9px;padding:11px 18px;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:8px;}
+  .btn-primary{background:var(--blue);color:#fff;}
+  .btn-primary:hover{background:var(--blue-dark);}
+  .btn-ghost{background:var(--accent);color:var(--blue-dark);}
+  .btn-ghost:hover{background:#dcecff;}
+  .btn-outline{background:#fff;color:var(--ink);border:1px solid var(--border);}
+  .btn-outline:hover{border-color:var(--blue);color:var(--blue);}
+  .btn-sm{padding:7px 12px;font-size:12.5px;border-radius:8px;}
+
+  /* Search */
+  .search-wrap{position:relative;}
+  .search-input{width:100%;padding:14px 16px 14px 44px;border:1px solid var(--border);border-radius:12px;font-size:14.5px;background:#fff;}
+  .search-wrap .ic{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--ink-soft);}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;}
+  .chip{
+    padding:7px 13px;border-radius:999px;background:var(--accent);color:var(--blue-dark);font-size:12.5px;font-weight:600;
+    border:1px solid transparent;
+  }
+  .chip.on{background:var(--blue);color:#fff;}
+  .chip-group-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin:14px 0 6px 0;}
+
+  /* interpretation */
+  .interp{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;}
+  .interp-tag{background:#fff;border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:12.5px;}
+  .interp-tag b{color:var(--blue-dark);}
+  .interp-empty{color:var(--ink-soft);font-size:13px;margin-top:14px;}
+
+  /* directory grid */
+  .directory-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px;}
+  @media(max-width:1100px){.directory-grid{grid-template-columns:1fr 1fr;}}
+  @media(max-width:640px){.directory-grid{grid-template-columns:1fr;}}
+
+  .emp-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:16px;}
+  .emp-head{display:flex;gap:12px;align-items:center;margin-bottom:10px;}
+  .avatar{width:42px;height:42px;border-radius:10px;background:var(--accent);color:var(--blue-dark);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;overflow:hidden;}
+  .avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+  .emp-name{font-size:14.5px;font-weight:700;margin:0;}
+  .emp-role{font-size:12px;color:var(--ink-soft);margin:1px 0 0 0;}
+  .emp-meta{font-size:12px;color:var(--ink-soft);line-height:1.7;margin-bottom:10px;}
+  .emp-meta b{color:var(--ink);font-weight:600;}
+  .tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+  .tag{background:var(--accent);color:var(--blue-dark);font-size:11px;font-weight:600;padding:4px 9px;border-radius:999px;}
+  .tag.mentor{background:#E8F8F0;color:var(--green);}
+  .emp-actions{display:flex;gap:8px;}
+
+  .score-badge{background:var(--blue);color:#fff;font-weight:800;font-size:15px;border-radius:10px;padding:8px 10px;text-align:center;min-width:58px;}
+  .rec-card{display:flex;gap:16px;align-items:flex-start;}
+  .rec-main{flex:1;}
+  .why-list{list-style:none;margin:10px 0 0 0;padding:0;font-size:12.5px;color:var(--ink);}
+  .why-list li{margin-bottom:5px;}
+  .why-list li:before{content:"✓ ";color:var(--green);font-weight:800;}
+
+  .intro-box{background:#FBFCFE;border:1px dashed var(--border);border-radius:10px;padding:14px;margin-top:12px;font-size:13px;line-height:1.65;white-space:pre-wrap;display:none;}
+
+  .stat-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;transition:border-color .15s ease, transform .15s ease;}
+  .stat-card[data-goto]:hover{border-color:var(--blue);transform:translateY(-1px);}
+  .stat-num{font-size:26px;font-weight:800;color:var(--blue-dark);}
+  .stat-label{font-size:12px;color:var(--ink-soft);margin-top:4px;}
+
+  .erg-card{border:1px solid var(--border);border-radius:12px;padding:16px;background:#fff;}
+  .erg-card h4{margin:0 0 4px 0;font-size:14px;}
+  .erg-card p{margin:0;font-size:12.5px;color:var(--ink-soft);}
+
+  .path-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px 16px;font-size:13.5px;font-weight:600;margin-bottom:10px;}
+  .path-row .arrow{color:var(--blue);font-weight:800;}
+
+  .form-actions{margin-top:18px;display:flex;gap:10px;}
+  .empty-state{text-align:center;padding:40px 20px;color:var(--ink-soft);font-size:13.5px;}
+
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;font-size:13px;box-shadow:var(--shadow);opacity:0;transform:translateY(8px);transition:all .25s ease;pointer-events:none;z-index:50;}
+
+  .auth-gate{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--blue) 0%, var(--blue-dark) 100%);padding:24px;}
+  .auth-card{background:#fff;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.18);padding:34px 30px;width:100%;max-width:340px;text-align:center;}
+  .auth-card .field{text-align:left;}
+  .auth-error{background:#FDECEA;color:#C0392B;border:1px solid #F3C7C0;border-radius:8px;padding:9px 12px;font-size:12.5px;margin-bottom:14px;text-align:left;}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,32,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:24px;}
+  .modal-card{background:#fff;border-radius:16px;max-width:480px;width:100%;max-height:86vh;overflow-y:auto;padding:30px 28px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .modal-close{position:absolute;top:14px;right:14px;background:var(--accent);color:var(--blue-dark);border:none;width:30px;height:30px;border-radius:8px;font-size:18px;line-height:1;cursor:pointer;}
+  .modal-header{display:flex;gap:16px;align-items:center;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border);}
+  .modal-name{font-size:19px;font-weight:800;margin:0;}
+  .modal-role{font-size:13px;color:var(--ink-soft);margin:2px 0 0 0;}
+  .modal-row{padding:11px 0;border-bottom:1px solid #F1F4F9;}
+  .modal-row:last-child{border-bottom:none;}
+  .modal-row-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:4px;}
+  .modal-row-value{font-size:13.5px;color:var(--ink);}
+  .toast.show{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+
+<div id="authGate" class="auth-gate">
+  <div class="auth-card">
+    <div class="brand-mark" style="margin:0 auto 14px auto;">DC</div>
+    <h2 style="margin:0 0 4px 0;font-size:19px;">Dell Connect AI</h2>
+    <p style="margin:0 0 20px 0;color:var(--ink-soft);font-size:13px;">Sign in with your @dell.com email to continue.</p>
+    <div id="authGateError" class="auth-error" style="display:none;"></div>
+    <div class="field" style="margin-bottom:12px;">
+      <label>Email</label>
+      <input type="email" id="authEmail" placeholder="name@dell.com">
+    </div>
+    <div id="authSignupWarning" style="display:none;background:#FFF7E6;border:1px solid #F0D9A6;border-radius:8px;padding:10px 12px;margin-bottom:14px;text-align:left;font-size:11.5px;color:#8A6416;line-height:1.5;">
+      ⚠️ Use a password you don't use anywhere else, not your Dell network password. This is an internal tool, not yet a fully secured Dell website.
+    </div>
+    <div class="field" style="margin-bottom:8px;">
+      <label>Password</label>
+      <input type="password" id="authPassword" placeholder="At least 8 characters">
+    </div>
+    <div id="authPasswordChecklist" style="display:none;text-align:left;font-size:11.5px;color:var(--ink-soft);margin:0 0 16px 2px;line-height:1.85;">
+      <div id="reqLength">At least 8 characters</div>
+      <div id="reqUpper">One uppercase letter</div>
+      <div id="reqLower">One lowercase letter</div>
+      <div id="reqNumber">One number</div>
+      <div id="reqSpecial">One special character (!@#$ etc.)</div>
+    </div>
+    <button class="btn btn-primary" id="authSubmitBtn" style="width:100%;justify-content:center;">Sign In</button>
+    <p style="margin:16px 0 0 0;font-size:12.5px;color:var(--ink-soft);">
+      <span id="authToggleLabel">New here?</span> <a href="#" id="authToggleLink" style="color:var(--blue);font-weight:600;">Create an account</a>
+    </p>
+    <p id="authGateLocalNote" style="display:none;margin:16px 0 0 0;font-size:12px;color:var(--amber);">Running local-only: sign-in isn't configured, so this device has open access.</p>
+    <p id="authConnectionStatus" style="display:none;margin:12px 0 0 0;font-size:11.5px;color:var(--ink-soft);word-break:break-word;"></p>
+  </div>
+</div>
+<div id="verifyEmailGate" class="auth-gate" style="display:none;">
+  <div class="auth-card">
+    <div class="brand-mark" style="margin:0 auto 14px auto;">DC</div>
+    <h2 style="margin:0 0 4px 0;font-size:19px;">Check your email</h2>
+    <p style="margin:0 0 8px 0;color:var(--ink-soft);font-size:13px;">We sent a verification link to</p>
+    <p id="verifyEmailAddress" style="margin:0 0 20px 0;font-weight:700;font-size:13.5px;"></p>
+    <div id="verifyGateError" class="auth-error" style="display:none;"></div>
+    <p style="margin:0 0 20px 0;color:var(--ink-soft);font-size:12.5px;line-height:1.6;">Click the link in that email, then come back here and continue.</p>
+    <button class="btn btn-primary" id="verifyContinueBtn" style="width:100%;justify-content:center;margin-bottom:10px;">I've verified — Continue</button>
+    <button class="btn btn-outline" id="verifyResendBtn" style="width:100%;justify-content:center;margin-bottom:10px;">Resend verification email</button>
+    <a href="#" id="verifySignOutLink" style="font-size:12.5px;color:var(--ink-soft);">Wrong email? Sign out</a>
+  </div>
+</div>
+<div class="app" id="appRoot" style="display:none;">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">DC</div>
+      <div class="brand-text"><strong>Dell Connect AI</strong><span>Find your people</span></div>
+    </div>
+    <nav id="navList">
+      <div class="nav-item active" data-section="dashboard"><span class="ic">▣</span> Dashboard</div>
+      <div class="nav-item" data-section="profile"><span class="ic">◐</span> My Profile</div>
+      <div class="nav-item" data-section="directory"><span class="ic">☰</span> Employee Directory</div>
+      <div class="nav-item" data-section="aisearch"><span class="ic">✦</span> AI Search</div>
+      <div class="nav-item" data-section="recommendations"><span class="ic">◈</span> Match Recommendations</div>
+      <div class="nav-item" data-section="ergs"><span class="ic">◎</span> ERGs</div>
+    </nav>
+    <div id="authArea" style="margin-top:18px;padding:14px;background:rgba(255,255,255,.10);border-radius:12px;font-size:12.5px;color:rgba(255,255,255,.9);"></div>
+    <div class="sidebar-footer">Dell has 100,000+ employees — but no smart way to find the ones you'd actually want to connect with. Now you do.</div>
+  </aside>
+
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <section class="section active" id="section-dashboard">
+      <div class="topbar">
+        <div>
+          <p class="page-title">Dashboard</p>
+          <p class="page-sub">A snapshot of the Dell Connect AI network — who's here, and what makes them worth meeting.</p>
+        </div>
+        <div class="pill" id="dashCount">— employees</div>
+      </div>
+      <div id="syncBanner" class="card-sub" style="display:none;margin:-10px 0 16px 2px;"></div>
+      <div class="grid grid-4" id="statGrid"></div>
+
+      <div class="card" style="margin-top:18px;">
+        <p class="card-title">Most Common</p>
+        <p class="card-sub">Patterns across the current network</p>
+        <div class="grid grid-3" id="mostCommonGrid"></div>
+      </div>
+
+      <div class="card">
+        <p class="card-title">Jump back in</p>
+        <p class="card-sub">Pick up where the network can help most</p>
+        <div class="grid grid-3">
+          <button class="btn btn-outline" data-goto="aisearch">✦ Try an AI Search</button>
+          <button class="btn btn-outline" data-goto="recommendations">◈ See Your Matches</button>
+          <button class="btn btn-outline" data-goto="profile">◐ Complete Your Profile</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROFILE -->
+    <section class="section" id="section-profile">
+      <div class="topbar">
+        <div>
+          <p class="page-title">Tell Us About Yourself</p>
+          <p class="page-sub">Your profile powers Match Recommendations, ERG suggestions, and AI-generated introductions.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div id="profileForm"></div>
+        <div class="form-actions">
+          <button class="btn btn-primary" id="btnUpdateProfile">Update Profile</button>
+          <span id="profileSavedMsg" style="font-size:12.5px;color:var(--green);font-weight:600;display:none;">Profile updated ✓</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- DIRECTORY -->
+    <section class="section" id="section-directory">
+      <div class="topbar">
+        <div>
+          <p class="page-title">Employee Directory</p>
+          <p class="page-sub">Search across every attribute — name, school, team, hometown, skills, interests, and more.</p>
+        </div>
+      </div>
+
+      <div class="card" id="addEmployeeCard" style="display:none;">
+        <p class="card-title" id="addEmployeeCardTitle">Add Employee Profile</p>
+        <p class="card-sub" id="addEmployeeCardSub">New profiles appear in the directory instantly and become searchable right away.</p>
+        <div id="addEmployeeForm"></div>
+        <div class="form-actions">
+          <button class="btn btn-primary" id="btnAddEmployee">Add Employee</button>
+          <button class="btn btn-outline" id="btnCancelAddEmployee">Cancel</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="search-wrap">
+          <span class="ic">⌕</span>
+          <input class="search-input" id="directorySearch" placeholder="Search name, school, team, hometown, skills, interests...">
+        </div>
+        <div id="chipFilters"></div>
+      </div>
+
+      <div id="directoryResultsMeta" class="card-sub" style="margin:14px 2px 0 2px;"></div>
+      <div class="directory-grid" id="directoryGrid"></div>
+    </section>
+
+    <!-- AI SEARCH -->
+    <section class="section" id="section-aisearch">
+      <div class="topbar">
+        <div>
+          <p class="page-title">AI Search</p>
+          <p class="page-sub">Describe who you're looking for in plain English. Dell Connect AI reads school, location, team, employer, interests, and ERGs straight from the query.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="search-wrap">
+          <span class="ic">✦</span>
+          <input class="search-input" id="aiSearchInput" placeholder="Try: Find Baylor alumni interested in coffee">
+        </div>
+        <div class="chips" style="margin-top:12px;">
+          <button class="chip example-chip">Find Baylor alumni interested in coffee</button>
+          <button class="chip example-chip">Find UTEP alumni who enjoy trivia</button>
+          <button class="chip example-chip">Find Women in Action members</button>
+          <button class="chip example-chip">Find Treasury professionals in Austin</button>
+          <button class="chip example-chip">Find people interested in mentorship</button>
+        </div>
+        <div class="card" style="background:var(--accent);border:none;margin-top:18px;" id="aiInterpretationCard">
+          <p class="card-title" style="margin-bottom:2px;">AI Interpretation</p>
+          <p style="margin:0 0 10px 0;font-size:11px;color:var(--ink-soft);">This is a best guess at what you're searching for and may not always be accurate — double check results before relying on them.</p>
+          <div class="interp" id="aiInterp"></div>
+          <div class="interp-empty" id="aiInterpEmpty">Type a query above to see how Dell Connect AI interprets it.</div>
+        </div>
+      </div>
+      <div id="aiResultsMeta" class="card-sub" style="margin:14px 2px 0 2px;"></div>
+      <div class="directory-grid" id="aiResultsGrid"></div>
+    </section>
+
+    <!-- RECOMMENDATIONS -->
+    <section class="section" id="section-recommendations">
+      <div class="topbar">
+        <div>
+          <p class="page-title">People You Should Meet</p>
+          <p class="page-sub">Ranked by shared school, hometown, location, interests, skills, career goals, ERGs, and past employers with your profile.</p>
+        </div>
+      </div>
+      <div id="recList"></div>
+    </section>
+
+    <!-- ERGS -->
+    <section class="section" id="section-ergs">
+      <div class="topbar">
+        <div>
+          <p class="page-title">Employee Resource Groups</p>
+          <p class="page-sub">Communities matched to your profile, plus every ERG active in the network.</p>
+        </div>
+      </div>
+      <div class="card">
+        <p class="card-title">Recommended Communities</p>
+        <p class="card-sub">Based on your interests, career goals, and background</p>
+        <div class="grid grid-3" id="ergRecGrid"></div>
+      </div>
+      <div class="card">
+        <p class="card-title">All ERGs at Dell Connect AI</p>
+        <p class="card-sub">Click an ERG to see its members</p>
+        <div class="grid grid-3" id="ergAllGrid"></div>
+      </div>
+      <div class="card" id="ergPeopleCard" style="display:none;">
+        <p class="card-title" id="ergPeopleTitle"></p>
+        <div class="directory-grid" id="ergPeopleGrid"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<datalist id="schoolDatalist"></datalist>
+
+<div id="profileModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <button class="modal-close" id="profileModalClose" aria-label="Close">&times;</button>
+    <div id="profileModalBody"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   FIREBASE SYNC
+   Replace the four placeholder values below with your own
+   free Firebase project's config (Project settings > General
+   > Your apps > SDK setup and configuration > Config).
+   Until you do, the app runs in local-only mode: it still
+   works, but additions only live in this browser tab.
+========================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCrtehpuXy40yoTUA5w4yonrA0BWrTmEzM",
+  authDomain: "dell-connect-ai.firebaseapp.com",
+  projectId: "dell-connect-ai",
+  storageBucket: "dell-connect-ai.firebasestorage.app",
+  appId: "1:962744498671:web:9b17c1ea704d84db815e1a"
+};
+const FIREBASE_CONFIGURED = firebaseConfig.apiKey !== "YOUR_API_KEY";
+let db = null;
+let employeesRef = null;
+let auth = null;
+let currentUser = null;
+let syncMode = "local"; // "local" | "syncing" | "live" | "error"
+
+/* =========================================================
+   DATA
+========================================================= */
+let nextId = 1;
+
+function emp(o){
+  // Random-ish id so IDs from different browsers/devices don't collide
+  // once this is wired to a shared Firestore collection.
+  o.id = o.id || (Date.now().toString(36) + Math.random().toString(36).slice(2,8));
+  return o;
+}
+
+let SEED_EMPLOYEES = [
+  emp({name:"Sarah Chen",email:"sarah.chen@dell.com",currentRole:"FP&A Analyst",currentTeam:"Finance",school:"UT Austin",hometownCity:"Austin",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"EY",previousDellTeam:["Global Audit"],skills:["Excel","Finance","Power BI"],interests:["Investing","Coffee","Running"],ergs:["Women in Action"],careerGoals:["FP&A","Investor Relations"],openToConnectAbout:["Mentorship","Networking"],mentorAvailable:true}),
+  emp({name:"Marcus Reed",email:"marcus.reed@dell.com",currentRole:"Audit Senior",currentTeam:"Global Audit",school:"Texas A&M",hometownCity:"Houston",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"PwC",previousDellTeam:[],skills:["Risk Assessment","SQL"],interests:["Golf","Fantasy Football","Trivia"],ergs:["Veterans & Supporters"],careerGoals:["Internal Audit Leadership"],openToConnectAbout:["Coffee Chats","Mentorship"],mentorAvailable:true}),
+  emp({name:"Priya Nair",email:"priya.nair@dell.com",currentRole:"Treasury Analyst",currentTeam:"Treasury",school:"UTEP",hometownCity:"El Paso",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"JPMorgan",previousDellTeam:[],skills:["Cash Management","Excel","Bloomberg"],interests:["Trivia","Photography","Cooking"],ergs:["Asians in Action"],careerGoals:["Treasury","Corporate Finance"],openToConnectAbout:["Networking"],mentorAvailable:false}),
+  emp({name:"Daniel Okafor",email:"daniel.okafor@dell.com",currentRole:"Strategy Associate",currentTeam:"Strategy",school:"Harvard",hometownCity:"Dallas",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"McKinsey",previousDellTeam:[],skills:["Strategy","Financial Modeling","Presentations"],interests:["Basketball","Investing","Hiking"],ergs:["Black Networking Alliance"],careerGoals:["Strategy","General Management"],openToConnectAbout:["Mentorship","Coffee Chats"],mentorAvailable:true}),
+  emp({name:"Emily Zhang",email:"emily.zhang@dell.com",currentRole:"Supply Chain Analyst",currentTeam:"Supply Chain",school:"Georgia Tech",hometownCity:"Atlanta",hometownState:"Georgia",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"Accenture",previousDellTeam:[],skills:["Logistics","SAP","Data Analysis"],interests:["Running","Gaming","Cooking"],ergs:["Asians in Action"],careerGoals:["Supply Chain Strategy"],openToConnectAbout:["Networking"],mentorAvailable:false}),
+  emp({name:"Jordan Blake",email:"jordan.blake@dell.com",currentRole:"Product Manager",currentTeam:"Product",school:"Stanford",hometownCity:"San Francisco",hometownState:"California",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"Microsoft",previousDellTeam:[],skills:["Product Strategy","Roadmapping","SQL"],interests:["Golf","Investing","Photography"],ergs:["Pride"],careerGoals:["Product Leadership"],openToConnectAbout:["Mentorship"],mentorAvailable:true}),
+  emp({name:"Isabella Garcia",email:"isabella.garcia@dell.com",currentRole:"Marketing Specialist",currentTeam:"Marketing",school:"SMU",hometownCity:"San Antonio",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"IBM",previousDellTeam:[],skills:["Content Strategy","Analytics","Adobe Suite"],interests:["Pickleball","Coffee","Trivia"],ergs:["Latino Connection"],careerGoals:["Brand Strategy"],openToConnectAbout:["Coffee Chats","Networking"],mentorAvailable:false}),
+  emp({name:"Ryan Whitfield",email:"ryan.whitfield@dell.com",currentRole:"Audit Intern",currentTeam:"Global Audit",school:"Baylor",hometownCity:"Waco",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"",previousDellTeam:[],skills:["Excel","Finance"],interests:["Coffee","Pickleball","Basketball"],ergs:[],careerGoals:["FP&A","Treasury"],openToConnectAbout:["Mentorship","Coffee Chats"],mentorAvailable:false}),
+  emp({name:"Alexis Turner",email:"alexis.turner@dell.com",currentRole:"Engineering Manager",currentTeam:"Engineering",school:"Georgia Tech",hometownCity:"Charlotte",hometownState:"North Carolina",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"IBM",previousDellTeam:[],skills:["Python","System Design","Leadership"],interests:["Gaming","Hiking","Fantasy Football"],ergs:["Black Networking Alliance"],careerGoals:["Engineering Leadership"],openToConnectAbout:["Mentorship"],mentorAvailable:true}),
+  emp({name:"Grace Kim",email:"grace.kim@dell.com",currentRole:"Investor Relations Associate",currentTeam:"Finance",school:"UT Austin",hometownCity:"Plano",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"Goldman Sachs",previousDellTeam:["Treasury"],skills:["Financial Modeling","Investor Communications","Excel"],interests:["Investing","Running","Photography"],ergs:["Asians in Action","Women in Action"],careerGoals:["Investor Relations","Corporate Finance"],openToConnectAbout:["Mentorship","Networking"],mentorAvailable:true}),
+  emp({name:"Malik Thompson",email:"malik.thompson@dell.com",currentRole:"Audit Manager",currentTeam:"Global Audit",school:"Texas A&M",hometownCity:"Houston",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"KPMG",previousDellTeam:[],skills:["Risk Management","Team Leadership"],interests:["Golf","Fantasy Football","Cooking"],ergs:["Veterans & Supporters","Black Networking Alliance"],careerGoals:["Audit Leadership","Enterprise Risk"],openToConnectAbout:["Mentorship"],mentorAvailable:true}),
+  emp({name:"Natalie Brooks",email:"natalie.brooks@dell.com",currentRole:"Treasury Manager",currentTeam:"Treasury",school:"Texas Tech",hometownCity:"Lubbock",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"JPMorgan",previousDellTeam:[],skills:["Cash Management","Risk Hedging","Excel"],interests:["Investing","Trivia","Golf"],ergs:["Women in Action"],careerGoals:["Treasury Leadership"],openToConnectAbout:["Mentorship","Coffee Chats"],mentorAvailable:true}),
+  emp({name:"Kevin Alvarez",email:"kevin.alvarez@dell.com",currentRole:"Strategy Intern",currentTeam:"Strategy",school:"UTEP",hometownCity:"El Paso",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"",previousDellTeam:[],skills:["Excel","Research"],interests:["Trivia","Basketball","Gaming"],ergs:["Latino Connection"],careerGoals:["Strategy","Consulting"],openToConnectAbout:["Mentorship"],mentorAvailable:false}),
+  emp({name:"Olivia Martin",email:"olivia.martin@dell.com",currentRole:"Product Designer",currentTeam:"Product",school:"SMU",hometownCity:"Dallas",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"Accenture",previousDellTeam:[],skills:["UX Design","Figma","Research"],interests:["Photography","Hiking","Coffee"],ergs:["Pride"],careerGoals:["Design Leadership"],openToConnectAbout:["Coffee Chats"],mentorAvailable:false}),
+  emp({name:"Ethan Brooks",email:"ethan.brooks@dell.com",currentRole:"Software Engineer",currentTeam:"Engineering",school:"UT Austin",hometownCity:"Round Rock",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"Microsoft",previousDellTeam:[],skills:["Python","Cloud Infrastructure","SQL"],interests:["Gaming","Running","Basketball"],ergs:[],careerGoals:["Engineering Leadership"],openToConnectAbout:["Networking"],mentorAvailable:false}),
+  emp({name:"Sofia Ramirez",email:"sofia.ramirez@dell.com",currentRole:"Marketing Manager",currentTeam:"Marketing",school:"Baylor",hometownCity:"Waco",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"IBM",previousDellTeam:[],skills:["Brand Strategy","Campaign Management","Analytics"],interests:["Coffee","Pickleball","Hiking"],ergs:["Latino Connection","Women in Action"],careerGoals:["CMO Track"],openToConnectAbout:["Mentorship"],mentorAvailable:true}),
+  emp({name:"Tyler Nguyen",email:"tyler.nguyen@dell.com",currentRole:"Supply Chain Manager",currentTeam:"Supply Chain",school:"Texas Tech",hometownCity:"Fort Worth",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"Deloitte",previousDellTeam:[],skills:["Logistics","Vendor Management","SAP"],interests:["Fantasy Football","Golf","Gaming"],ergs:["Asians in Action"],careerGoals:["Supply Chain Strategy"],openToConnectAbout:["Mentorship","Networking"],mentorAvailable:true}),
+  emp({name:"Hannah Lee",email:"hannah.lee@dell.com",currentRole:"Finance Intern",currentTeam:"Finance",school:"UT Austin",hometownCity:"Dallas",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"",previousDellTeam:[],skills:["Excel","Finance","Power BI"],interests:["Investing","Coffee","Trivia"],ergs:["Asians in Action"],careerGoals:["FP&A","Investor Relations"],openToConnectAbout:["Mentorship","Coffee Chats"],mentorAvailable:false}),
+  emp({name:"Diego Fernandez",email:"diego.fernandez@dell.com",currentRole:"Audit Associate",currentTeam:"Global Audit",school:"SMU",hometownCity:"San Antonio",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"EY",previousDellTeam:[],skills:["Excel","Data Analysis"],interests:["Pickleball","Basketball","Cooking"],ergs:["Latino Connection"],careerGoals:["FP&A","Audit Leadership"],openToConnectAbout:["Coffee Chats","Mentorship"],mentorAvailable:false}),
+  emp({name:"Chloe Anderson",email:"chloe.anderson@dell.com",currentRole:"Investor Relations Manager",currentTeam:"Finance",school:"Harvard",hometownCity:"Boston",hometownState:"Massachusetts",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"Goldman Sachs",previousDellTeam:[],skills:["Investor Communications","Financial Modeling","Public Speaking"],interests:["Running","Investing","Photography"],ergs:["Women in Action"],careerGoals:["IR Leadership"],openToConnectAbout:["Mentorship"],mentorAvailable:true}),
+  emp({name:"Brandon Carter",email:"brandon.carter@dell.com",currentRole:"Strategy Manager",currentTeam:"Strategy",school:"Stanford",hometownCity:"Los Angeles",hometownState:"California",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"McKinsey",previousDellTeam:[],skills:["Strategy","M&A","Financial Modeling"],interests:["Golf","Investing","Hiking"],ergs:["Veterans & Supporters"],careerGoals:["Strategy Leadership"],openToConnectAbout:["Mentorship","Networking"],mentorAvailable:true}),
+  emp({name:"Maya Patel",email:"maya.patel@dell.com",currentRole:"Treasury Intern",currentTeam:"Treasury",school:"UT Austin",hometownCity:"Houston",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"",previousDellTeam:[],skills:["Excel","Bloomberg"],interests:["Investing","Trivia","Running"],ergs:["Asians in Action"],careerGoals:["Treasury","Investor Relations"],openToConnectAbout:["Mentorship","Coffee Chats"],mentorAvailable:false}),
+  emp({name:"Connor Murphy",email:"connor.murphy@dell.com",currentRole:"Product Analyst",currentTeam:"Product",school:"Texas A&M",hometownCity:"Austin",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"Accenture",previousDellTeam:[],skills:["SQL","Product Analytics","Roadmapping"],interests:["Fantasy Football","Gaming","Golf"],ergs:["Veterans & Supporters"],careerGoals:["Product Leadership"],openToConnectAbout:["Networking"],mentorAvailable:false}),
+  emp({name:"Ava Robinson",email:"ava.robinson@dell.com",currentRole:"Marketing Analyst",currentTeam:"Marketing",school:"UTEP",hometownCity:"El Paso",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"PwC",previousDellTeam:[],skills:["Analytics","Content Strategy","Excel"],interests:["Coffee","Photography","Trivia"],ergs:["Latino Connection"],careerGoals:["Brand Strategy"],openToConnectAbout:["Coffee Chats"],mentorAvailable:false}),
+  emp({name:"Nathan Walker",email:"nathan.walker@dell.com",currentRole:"Engineering Lead",currentTeam:"Engineering",school:"Georgia Tech",hometownCity:"Denver",hometownState:"Colorado",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"IBM",previousDellTeam:[],skills:["System Design","Leadership","Cloud Infrastructure"],interests:["Hiking","Gaming","Golf"],ergs:["Pride"],careerGoals:["Engineering Leadership"],openToConnectAbout:["Mentorship"],mentorAvailable:true}),
+  emp({name:"Zoe Campbell",email:"zoe.campbell@dell.com",currentRole:"Audit Senior",currentTeam:"Global Audit",school:"Baylor",hometownCity:"Waco",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"Deloitte",previousDellTeam:[],skills:["Risk Assessment","Data Analysis"],interests:["Cooking","Pickleball","Coffee"],ergs:["Women in Action"],careerGoals:["Audit Leadership","FP&A"],openToConnectAbout:["Mentorship","Coffee Chats"],mentorAvailable:true}),
+  emp({name:"Liam Foster",email:"liam.foster@dell.com",currentRole:"Supply Chain Intern",currentTeam:"Supply Chain",school:"Texas Tech",hometownCity:"Lubbock",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Round Rock",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"",previousDellTeam:[],skills:["Excel","SAP"],interests:["Fantasy Football","Basketball","Gaming"],ergs:[],careerGoals:["Supply Chain Strategy"],openToConnectAbout:["Mentorship"],mentorAvailable:false}),
+  emp({name:"Ella Simmons",email:"ella.simmons@dell.com",currentRole:"Finance Manager",currentTeam:"Finance",school:"Stanford",hometownCity:"San Francisco",hometownState:"California",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"Goldman Sachs",previousDellTeam:[],skills:["Financial Modeling","Forecasting","Leadership"],interests:["Investing","Running","Photography"],ergs:["Pride","Women in Action"],careerGoals:["FP&A Leadership"],openToConnectAbout:["Mentorship"],mentorAvailable:true}),
+  emp({name:"Owen Bennett",email:"owen.bennett@dell.com",currentRole:"Strategy Analyst",currentTeam:"Strategy",school:"UT Austin",hometownCity:"Corpus Christi",hometownState:"Texas",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"KPMG",previousDellTeam:[],skills:["Financial Modeling","Strategy","Presentations"],interests:["Golf","Investing","Trivia"],ergs:["Veterans & Supporters"],careerGoals:["Strategy","Consulting"],openToConnectAbout:["Mentorship","Coffee Chats"],mentorAvailable:false}),
+  emp({name:"Layla Hussain",email:"layla.hussain@dell.com",currentRole:"Product Marketing Manager",currentTeam:"Marketing",school:"Harvard",hometownCity:"Chicago",hometownState:"Illinois",hometownRegion:"AMER",hometownCountry:"United States",locationCity:"Austin",locationState:"Texas",locationRegion:"AMER",locationCountry:"United States",previousEmployer:"Microsoft",previousDellTeam:[],skills:["Product Strategy","Content Strategy","Analytics"],interests:["Photography","Coffee","Hiking"],ergs:["Asians in Action"],careerGoals:["Brand Strategy","CMO Track"],openToConnectAbout:["Mentorship","Networking"],mentorAvailable:true})
+];
+SEED_EMPLOYEES.forEach(e => emp(e)); // stamp stable-ish ids onto seed rows
+let employees = SEED_EMPLOYEES.map(e => ({...e}));
+
+const SILHOUETTE_ICON = `<svg viewBox="0 0 24 24" width="60%" height="60%" fill="currentColor"><path d="M12 12c2.76 0 5-2.46 5-5.5S14.76 1 12 1 7 3.46 7 6.5 9.24 12 12 12zm0 2.5c-3.34 0-10 1.68-10 5v2.5h20V19.5c0-3.32-6.66-5-10-5z"/></svg>`;
+
+const SCHOOL_OPTIONS = [
+  "UT Austin", "Texas A&M", "Baylor", "UTEP", "SMU", "Texas Tech",
+  "Georgia Tech", "Harvard", "Stanford"
+];
+
+const US_STATES = [
+  "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware",
+  "Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky",
+  "Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri",
+  "Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York",
+  "North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island",
+  "South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington",
+  "West Virginia","Wisconsin","Wyoming","District of Columbia"
+];
+
+const ERG_OPTIONS = [
+  "Asians in Action", "Black Networking Alliance", "Conexus", "Family Balance",
+  "GenNext", "Interfaith", "Latino Connection", "Planet", "Pride",
+  "Veterans & Supporters", "Women in Action", "Mosaic", "True Ability", "CD&I Communities"
+];
+
+let profile = {
+  name:"", preferredName:"", email:"", currentRole:"", currentTeam:"", school:"", joinYear:"",
+  hometownCity:"", hometownState:"", hometownCountry:"", hometownRegion:"",
+  locationCity:"", locationState:"", locationCountry:"", locationRegion:"",
+  photoUrl:"", previousDellTeam:[],
+  skills:[], interests:[], languages:[], certifications:[], ergs:[], careerGoals:[], openToConnectAbout:[], mentorAvailable:false, wantsMentor:false,
+  programs:{fdp:false, frp:false, adp:false, fap:false}, rotations:{fdp:[], frp:[], adp:[], fap:[]}
+};
+
+/* =========================================================
+   HELPERS
+========================================================= */
+function asArray(value){
+  // Coerces any list-typed field into a real array. "x || []" only protects
+  // against undefined/null — it does nothing if x is a truthy non-array value
+  // (e.g. a legacy string from before a field became a list), which is exactly
+  // what caused repeated crashes in search and rendering. This is the single
+  // place that logic lives now, instead of scattered "(x||[])" fallbacks.
+  if(Array.isArray(value)) return value;
+  if(!value) return [];
+  return String(value).split(",").map(s=>s.trim()).filter(Boolean);
+}
+function formatCityState(city, state){
+  city = (city||"").trim(); state = (state||"").trim();
+  if(city && state) return `${city}, ${state}`;
+  return city || state || "";
+}
+
+const REGION_LABELS = {
+  AMER: "AMER (Americas)",
+  APJC: "APJC (Asia Pacific, China, Japan)",
+  EMEA: "EMEA (Europe, Middle East, Africa)",
+};
+const REGION_COUNTRIES = {
+  AMER: [
+    "Argentina","Bahamas","Barbados","Belize","Bolivia","Brazil","Canada","Chile","Colombia",
+    "Costa Rica","Cuba","Dominican Republic","Ecuador","El Salvador","Guatemala","Guyana","Haiti",
+    "Honduras","Jamaica","Mexico","Nicaragua","Panama","Paraguay","Peru","Puerto Rico","Suriname",
+    "Trinidad and Tobago","United States","Uruguay","Venezuela"
+  ],
+  APJC: [
+    "Australia","Bangladesh","Cambodia","China","Hong Kong","India","Indonesia","Japan","Kazakhstan",
+    "Laos","Malaysia","Mongolia","Myanmar","Nepal","New Zealand","Pakistan","Papua New Guinea",
+    "Philippines","Singapore","South Korea","Sri Lanka","Taiwan","Thailand","Vietnam"
+  ],
+  EMEA: [
+    "Albania","Algeria","Austria","Bahrain","Belgium","Bulgaria","Croatia","Cyprus","Czech Republic",
+    "Denmark","Egypt","Estonia","Ethiopia","Finland","France","Germany","Ghana","Greece","Hungary",
+    "Iceland","Iraq","Ireland","Israel","Italy","Jordan","Kenya","Kuwait","Latvia","Lebanon",
+    "Lithuania","Luxembourg","Malta","Morocco","Netherlands","Nigeria","Norway","Oman","Poland",
+    "Portugal","Qatar","Romania","Saudi Arabia","Serbia","Slovakia","Slovenia","South Africa","Spain",
+    "Sweden","Switzerland","Tanzania","Tunisia","Turkey","Uganda","Ukraine","United Arab Emirates",
+    "United Kingdom","Zambia","Zimbabwe"
+  ],
+};
+function regionForCountry(country){
+  for(const region of Object.keys(REGION_COUNTRIES)){
+    if(REGION_COUNTRIES[region].includes(country)) return region;
+  }
+  return "";
+}
+// City + State for USA (matches the existing convention), City + Country for
+// everywhere else, since state doesn't mean anything outside the US.
+function formatLocation(city, state, country){
+  city = (city||"").trim(); state = (state||"").trim(); country = (country||"").trim();
+  const parts = [];
+  if(city) parts.push(city);
+  if(country === "United States" || (!country && state)) { if(state) parts.push(state); }
+  else if(country) parts.push(country);
+  return parts.join(", ");
+}
+
+function employeeLocationValues(e){
+  // every fragment worth matching against: bare city, bare state, bare country, and
+  // the combined formatted form
+  return [
+    e.locationCity, e.locationState, e.locationCountry, formatLocation(e.locationCity, e.locationState, e.locationCountry),
+    e.hometownCity, e.hometownState, e.hometownCountry, formatLocation(e.hometownCity, e.hometownState, e.hometownCountry)
+  ].filter(Boolean);
+}
+function renderErgCheckboxes(containerId, selected){
+  const el = document.getElementById(containerId);
+  const picked = selected || [];
+  el.innerHTML = ERG_OPTIONS.map(erg=>{
+    const checked = picked.includes(erg) ? "checked" : "";
+    return `<label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:500;color:var(--ink);padding:8px 4px;border-bottom:1px solid #F1F4F9;width:100%;box-sizing:border-box;">
+      <input type="checkbox" value="${erg}" class="erg-checkbox" style="flex-shrink:0;width:15px;height:15px;" ${checked}><span>${erg}</span>
+    </label>`;
+  }).join("");
+}
+function getCheckedErgs(containerId){
+  return [...document.querySelectorAll(`#${containerId} .erg-checkbox:checked`)].map(cb=>cb.value);
+}
+function initials(name){
+  return name.split(" ").map(p=>p[0]).slice(0,2).join("").toUpperCase();
+}
+function avatarHTML(e, size){
+  const inits = initials(e.name);
+  const sizeAttr = size ? ` style="width:${size}px;height:${size}px;font-size:${Math.round(size*0.32)}px;"` : "";
+  if(e.photoUrl){
+    // onerror swaps back to initials if the stored image is missing or corrupt
+    return `<div class="avatar"${sizeAttr}><img src="${e.photoUrl}" alt="${e.name}" onerror="this.parentElement.innerHTML='${inits}';"></div>`;
+  }
+  return `<div class="avatar"${sizeAttr}>${inits}</div>`;
+}
+function readAndCompressImage(file, maxDim, quality){
+  return new Promise((resolve, reject)=>{
+    if(!file.type.startsWith("image/")){ reject(new Error("Not an image file")); return; }
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let { width, height } = img;
+        if(width > height && width > maxDim){ height = Math.round(height * (maxDim/width)); width = maxDim; }
+        else if(height >= width && height > maxDim){ width = Math.round(width * (maxDim/height)); height = maxDim; }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = ()=>reject(new Error("Could not read that image"));
+      img.src = ev.target.result;
+    };
+    reader.onerror = ()=>reject(new Error("Could not read that file"));
+    reader.readAsDataURL(file);
+  });
+}
+function csvToArr(str){
+  return (str||"").split(",").map(s=>s.trim()).filter(Boolean);
+}
+function uniqueVals(getter){
+  const set = new Set();
+  employees.forEach(e=>{
+    const v = getter(e);
+    if(Array.isArray(v)) v.forEach(x=>x && set.add(x));
+    else if(v) set.add(v);
+  });
+  return [...set].sort();
+}
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+document.querySelectorAll(".nav-item").forEach(item=>{
+  item.addEventListener("click", ()=> goto(item.dataset.section));
+});
+document.body.addEventListener("click", (ev)=>{
+  const gotoBtn = ev.target.closest("[data-goto]");
+  if(gotoBtn) goto(gotoBtn.dataset.goto);
+});
+function goto(section){
+  document.querySelectorAll(".nav-item").forEach(n=>n.classList.toggle("active", n.dataset.section===section));
+  document.querySelectorAll(".section").forEach(s=>s.classList.toggle("active", s.id === "section-"+section));
+  if(section==="dashboard") renderDashboard();
+  if(section==="directory") renderDirectory();
+  if(section==="recommendations") renderRecommendations();
+  if(section==="ergs") renderERGs();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+/* =========================================================
+   PROFILE FORM (Section 1)
+========================================================= */
+const FORM_SECTIONS = [
+  {
+    title: "Basic Info",
+    fields: [
+      {key:"name", label:"Full Name", placeholder:"Enter your full name"},
+      {key:"preferredName", label:"Preferred Name", placeholder:"What you go by"},
+      {key:"email", label:"Email", placeholder:"name@dell.com"},
+    ],
+    special: "photo",
+  },
+  {
+    title: "Current Role at Dell",
+    fields: [
+      {key:"currentRole", label:"Current Role", placeholder:"Analyst, Senior Analyst, Advisor"},
+      {key:"currentTeam", label:"Current Team", placeholder:"Global Audit & Transformation"},
+      {key:"joinYear", label:"Year Joined Dell", placeholder:"2026"},
+    ],
+    special: "currentLocation",
+  },
+  {
+    title: "Past Experience at Dell",
+    fields: [
+      {key:"previousDellTeam", label:"Past Roles / Teams at Dell", placeholder:"Global Audit, FP&A", list:true},
+    ],
+    special: "programs",
+  },
+  {
+    title: "Education",
+    fields: [
+      {key:"school", label:"School", placeholder:"UT Austin", datalist:"schoolDatalist"},
+    ],
+  },
+  {
+    title: "Personal Background",
+    fields: [
+      {key:"languages", label:"Languages Spoken", placeholder:"Spanish, Mandarin", list:true},
+    ],
+    special: "hometownLocation",
+  },
+  {
+    title: "Interests & Hobbies",
+    fields: [
+      {key:"interests", label:"Interests", placeholder:"Basketball, Investing, Pickleball", list:true},
+    ],
+  },
+  {
+    title: "Skills & Career",
+    fields: [
+      {key:"skills", label:"Skills", placeholder:"Excel, Finance, Power BI", list:true},
+      {key:"careerGoals", label:"Career Goals", placeholder:"FP&A Manager, Treasury Director", list:true},
+      {key:"certifications", label:"Certifications", placeholder:"CPA, CFA, Series 7", list:true},
+    ],
+  },
+  {
+    title: "Dell Community",
+    fields: [
+      {key:"openToConnectAbout", label:"Open To Connect About", placeholder:"Career Transitions, Interview Prep, Grad School", list:true},
+    ],
+    special: "community",
+  },
+];
+
+const PROGRAM_DEFS = [
+  { key:"fdp", label:"Financial Development Program (FDP)" },
+  { key:"frp", label:"Finance Rotation Program (FRP)" },
+  { key:"adp", label:"Accounting Development Program (ADP)" },
+  { key:"fap", label:"Finance Advance Program (FAP)" },
+];
+function programBlockHTML(prefix, key, label, checked, rotations){
+  rotations = rotations || [];
+  const rotationInputs = [0,1,2,3].map(i=>
+    `<input type="text" class="rotation-input" data-program="${key}" data-index="${i}" placeholder="Rotation ${i+1} (optional)" value="${(rotations[i]||"").replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:12.5px;margin-bottom:6px;background:#fff;">`
+  ).join("");
+  return `
+    <div class="program-block" style="border:1px solid var(--border);border-radius:9px;padding:10px 12px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" class="program-checkbox" id="${prefix}Program_${key}" data-program="${key}" style="width:15px;height:15px;" ${checked ? "checked" : ""}>
+        <span style="font-weight:600;color:var(--ink-soft);font-size:12.5px;">${label}</span>
+      </label>
+      <div class="rotations-box" id="${prefix}Rotations_${key}" style="display:${checked ? "block" : "none"};margin:10px 0 0 23px;padding:12px;background:#FBFCFE;border:1px solid var(--border);border-radius:8px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:8px;">Rotations</div>
+        ${rotationInputs}
+      </div>
+    </div>`;
+}
+function wireProgramCheckboxes(prefix){
+  PROGRAM_DEFS.forEach(({key})=>{
+    const cb = document.getElementById(`${prefix}Program_${key}`);
+    const box = document.getElementById(`${prefix}Rotations_${key}`);
+    if(cb && box){
+      cb.addEventListener("change", ()=>{ box.style.display = cb.checked ? "block" : "none"; });
+    }
+  });
+}
+function readProgramsAndRotations(prefix){
+  const programs = {};
+  const rotations = {};
+  PROGRAM_DEFS.forEach(({key})=>{
+    const cb = document.getElementById(`${prefix}Program_${key}`);
+    programs[key] = cb ? cb.checked : false;
+    const inputs = document.querySelectorAll(`#${prefix}Rotations_${key} .rotation-input`);
+    rotations[key] = [...inputs].map(i=>i.value.trim()).filter(Boolean);
+  });
+  return { programs, rotations };
+}
+
+function fieldValueFor(f, source){
+  if(!source) return f.list ? [] : "";
+  const v = source[f.key];
+  if(f.list) return Array.isArray(v) ? v : (v ? [v] : []);
+  return v || "";
+}
+
+// Builds every section — Basic Info, Current Role, Past Experience, Education,
+// Personal Background, Interests & Hobbies, Skills & Career, Dell Community — for
+// either form. Both forms use the exact same buckets and the exact same field
+// widgets (state dropdowns stay dropdowns, ERGs stay the scrollable checklist,
+// programs stay checkbox + rotations box), only the data source and ID prefix differ.
+function renderFormSections(containerId, prefix, source){
+  const wrap = document.getElementById(containerId);
+  wrap.innerHTML = "";
+  FORM_SECTIONS.forEach(section=>{
+    const sectionDiv = document.createElement("div");
+    sectionDiv.className = "form-section";
+    sectionDiv.style.marginBottom = "26px";
+    sectionDiv.innerHTML = `<h3 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--blue-dark);margin:0 0 12px 0;padding-bottom:8px;border-bottom:1px solid var(--border);">${section.title}</h3>`;
+
+    const gridDiv = document.createElement("div");
+    gridDiv.className = "grid grid-3";
+    section.fields.forEach(f=>{
+      const div = document.createElement("div");
+      div.className = "field";
+      const rawVal = fieldValueFor(f, source);
+      const val = f.list ? rawVal.join(", ") : rawVal;
+      const inputHTML = f.options
+        ? `<select data-key="${f.key}"><option value="">Select a state</option>${f.options.map(o=>`<option value="${o}" ${val===o?"selected":""}>${o}</option>`).join("")}</select>`
+        : `<input type="text" data-key="${f.key}" data-list="${!!f.list}" placeholder="${f.placeholder||""}" value="${String(val).replace(/"/g,'&quot;')}" ${f.datalist ? `list="${f.datalist}"` : ""}>`;
+      div.innerHTML = `<label>${f.label}</label>${inputHTML}`;
+      gridDiv.appendChild(div);
+    });
+    sectionDiv.appendChild(gridDiv);
+    wrap.appendChild(sectionDiv);
+
+    if(section.special === "photo") appendPhotoWidget(sectionDiv, prefix, source);
+    if(section.special === "programs") appendProgramsWidget(sectionDiv, prefix, source);
+    if(section.special === "community") appendCommunityWidget(sectionDiv, prefix, source);
+    if(section.special === "currentLocation") appendLocationWidget(sectionDiv, prefix, source, "location", "Current");
+    if(section.special === "hometownLocation") appendLocationWidget(sectionDiv, prefix, source, "hometown", "Hometown");
+  });
+}
+
+function appendPhotoWidget(sectionDiv, prefix, source){
+  const photoUrl = source ? (source.photoUrl || "") : "";
+  if(prefix === "newEmp") pendingNewEmployeePhoto = photoUrl;
+  const div = document.createElement("div");
+  div.className = "field";
+  div.style.gridColumn = "1 / -1";
+  const labelText = prefix === "profile" ? `Profile Photo <span style="color:#C0392B;">*required</span>` : "Profile Photo";
+  div.innerHTML = `<label>${labelText}</label>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="avatar" id="${prefix}PhotoAvatar" style="width:48px;height:48px;">${photoUrl ? `<img src="${photoUrl}" alt="Profile photo">` : SILHOUETTE_ICON}</div>
+      <input type="file" accept="image/*" id="${prefix}PhotoInput">
+    </div>`;
+  sectionDiv.appendChild(div);
+  document.getElementById(`${prefix}PhotoInput`).addEventListener("change", async (ev)=>{
+    const file = ev.target.files[0];
+    if(!file) return;
+    try{
+      const dataUrl = await readAndCompressImage(file, 200, 0.75);
+      document.getElementById(`${prefix}PhotoAvatar`).innerHTML = `<img src="${dataUrl}" alt="Profile photo">`;
+      if(prefix === "profile"){
+        profile.photoUrl = dataUrl;
+        saveProfileToLocalStorage();
+        showToast("Photo saved to your profile");
+      } else {
+        pendingNewEmployeePhoto = dataUrl;
+        showToast("Photo ready");
+      }
+    } catch(err){
+      console.error(err);
+      showToast(err.message || "Couldn't read that image");
+    }
+  });
+}
+
+function appendProgramsWidget(sectionDiv, prefix, source){
+  const programs = (source && source.programs) || {fdp:false, frp:false, adp:false, fap:false};
+  const rotations = (source && source.rotations) || {fdp:[], frp:[], adp:[], fap:[]};
+  const div = document.createElement("div");
+  div.className = "field";
+  div.style.gridColumn = "1 / -1";
+  div.innerHTML = `<label>Development Programs</label>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${PROGRAM_DEFS.map(p => programBlockHTML(prefix, p.key, p.label, programs[p.key], rotations[p.key])).join("")}
+    </div>`;
+  sectionDiv.appendChild(div);
+  wireProgramCheckboxes(prefix);
+}
+
+function appendCommunityWidget(sectionDiv, prefix, source){
+  const ergDiv = document.createElement("div");
+  ergDiv.className = "field";
+  ergDiv.style.gridColumn = "1 / -1";
+  ergDiv.innerHTML = `<label>ERGs</label>
+    <div id="${prefix}ErgCheckboxes" style="display:flex;flex-direction:column;max-width:420px;max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:9px;padding:4px 10px;"></div>`;
+  sectionDiv.appendChild(ergDiv);
+  renderErgCheckboxes(`${prefix}ErgCheckboxes`, source ? source.ergs : []);
+
+  const wantsToBeMentor = source ? !!source.mentorAvailable : false;
+  const wantsAMentor = source ? !!source.wantsMentor : false;
+  const mentorDiv = document.createElement("div");
+  mentorDiv.className = "field";
+  mentorDiv.style.gridColumn = "1 / -1";
+  mentorDiv.innerHTML = `
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <input type="checkbox" id="${prefix}MentorCheckbox" style="width:15px;height:15px;" ${wantsToBeMentor ? "checked" : ""}>
+      <span style="font-weight:600;color:var(--ink-soft);font-size:12.5px;">Do You Want to Be a Mentor?</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="${prefix}WantsMentorCheckbox" style="width:15px;height:15px;" ${wantsAMentor ? "checked" : ""}>
+      <span style="font-weight:600;color:var(--ink-soft);font-size:12.5px;">Do You Want a Mentor?</span>
+    </label>`;
+  sectionDiv.appendChild(mentorDiv);
+}
+
+// Cascading Region -> Country -> (State, only for USA) -> City. fieldPrefix is
+// "hometown" or "location" (matching the existing hometownCity/locationCity naming),
+// used for both which data keys to read/write and which DOM ids to generate, so the
+// exact same function builds either widget on either form.
+function appendLocationWidget(sectionDiv, prefix, source, fieldPrefix, labelWord){
+  const region = source ? (source[`${fieldPrefix}Region`] || "") : "";
+  const country = source ? (source[`${fieldPrefix}Country`] || "") : "";
+  const state = source ? (source[`${fieldPrefix}State`] || "") : "";
+  const city = source ? (source[`${fieldPrefix}City`] || "") : "";
+  const countryOptions = region ? (REGION_COUNTRIES[region] || []) : [];
+  const isUSA = country === "United States";
+  const widgetId = `${prefix}_${fieldPrefix}`;
+
+  const div = document.createElement("div");
+  div.className = "field";
+  div.style.gridColumn = "1 / -1";
+  div.innerHTML = `
+    <label style="margin-bottom:2px;">${labelWord} Location</label>
+    <div class="grid grid-3" style="margin-top:8px;">
+      <div class="field">
+        <label>${labelWord} Region</label>
+        <select id="${widgetId}Region" data-key="${fieldPrefix}Region">
+          <option value="">Select a region</option>
+          ${Object.keys(REGION_LABELS).map(r=>`<option value="${r}" ${region===r?"selected":""}>${REGION_LABELS[r]}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field">
+        <label>${labelWord} Country</label>
+        <input type="text" id="${widgetId}Country" data-key="${fieldPrefix}Country" list="${widgetId}CountryList" placeholder="${region ? "Start typing a country" : "Select a region first"}" value="${country.replace(/"/g,'&quot;')}" ${!region ? "disabled" : ""}>
+        <datalist id="${widgetId}CountryList">${countryOptions.map(c=>`<option value="${c}">`).join("")}</datalist>
+      </div>
+      <div class="field" id="${widgetId}StateWrap" style="display:${isUSA ? "block" : "none"};">
+        <label>${labelWord} State</label>
+        <select id="${widgetId}State" data-key="${fieldPrefix}State">
+          <option value="">Select a state</option>
+          ${US_STATES.map(s=>`<option value="${s}" ${state===s?"selected":""}>${s}</option>`).join("")}
+        </select>
+      </div>
+      <div class="field">
+        <label>${labelWord} City</label>
+        <input type="text" id="${widgetId}City" data-key="${fieldPrefix}City" placeholder="City" value="${city.replace(/"/g,'&quot;')}">
+      </div>
+    </div>`;
+  sectionDiv.appendChild(div);
+
+  const regionSel = document.getElementById(`${widgetId}Region`);
+  const countryInput = document.getElementById(`${widgetId}Country`);
+  const countryList = document.getElementById(`${widgetId}CountryList`);
+  const stateWrap = document.getElementById(`${widgetId}StateWrap`);
+
+  regionSel.addEventListener("change", ()=>{
+    const newRegion = regionSel.value;
+    countryInput.disabled = !newRegion;
+    countryInput.placeholder = newRegion ? "Start typing a country" : "Select a region first";
+    countryInput.value = "";
+    countryList.innerHTML = (REGION_COUNTRIES[newRegion]||[]).map(c=>`<option value="${c}">`).join("");
+    stateWrap.style.display = "none"; // country just got cleared, so state no longer applies
+  });
+  countryInput.addEventListener("input", ()=>{
+    stateWrap.style.display = countryInput.value.trim() === "United States" ? "block" : "none";
+  });
+}
+
+function renderProfileForm(){
+  renderFormSections("profileForm", "profile", profile);
+}
+document.getElementById("btnUpdateProfile").addEventListener("click", ()=>{
+  if(!profile.photoUrl){
+    showToast("A profile photo is required before you can save your profile");
+    const photoInput = document.getElementById("profilePhotoInput");
+    if(photoInput){
+      try{ photoInput.scrollIntoView({behavior:"smooth", block:"center"}); } catch(err){ /* not critical if unsupported */ }
+    }
+    return;
+  }
+  document.querySelectorAll("#profileForm input[data-key], #profileForm select[data-key]").forEach(inp=>{
+    const key = inp.dataset.key;
+    profile[key] = inp.dataset.list === "true" ? csvToArr(inp.value) : inp.value.trim();
+  });
+  profile.mentorAvailable = document.getElementById("profileMentorCheckbox").checked;
+  profile.wantsMentor = document.getElementById("profileWantsMentorCheckbox").checked;
+  const profileProgramData = readProgramsAndRotations("profile");
+  profile.programs = profileProgramData.programs;
+  profile.rotations = profileProgramData.rotations;
+  profile.ergs = getCheckedErgs("profileErgCheckboxes");
+  saveProfileToLocalStorage();
+  syncProfileToDirectory();
+  const msg = document.getElementById("profileSavedMsg");
+  msg.style.display = "inline";
+  setTimeout(()=>msg.style.display="none", 2500);
+  showToast("Profile updated");
+  renderRecommendations();
+  renderERGs();
+});
+
+/* =========================================================
+   ADD EMPLOYEE FORM (Section 2)
+========================================================= */
+let pendingNewEmployeePhoto = "";
+let editingEmployeeId = null;
+function renderAddEmployeeForm(existingEmp){
+  pendingNewEmployeePhoto = existingEmp ? (existingEmp.photoUrl || "") : "";
+  renderFormSections("addEmployeeForm", "newEmp", existingEmp);
+}
+
+function canEditEmployee(e){
+  if(!FIREBASE_CONFIGURED) return true; // local-only mode has no real user accounts to enforce against
+  if(!currentUser) return false;
+  return !!e.createdBy && e.createdBy === currentUser.uid;
+}
+
+function openEditEmployeeForm(id){
+  const target = employees.find(e => String(e.id) === String(id));
+  if(!target){ showToast("Couldn't find that employee"); return; }
+  if(!canEditEmployee(target)){ showToast("Only the person who added this profile can edit it"); return; }
+  goto("directory");
+  editingEmployeeId = target.id;
+  renderAddEmployeeForm(target);
+  document.getElementById("addEmployeeCardTitle").textContent = `Edit ${target.name}`;
+  document.getElementById("addEmployeeCardSub").textContent = "Changes save to this profile directly.";
+  document.getElementById("btnAddEmployee").textContent = "Save Changes";
+  document.getElementById("addEmployeeCard").style.display = "block";
+  document.getElementById("addEmployeeCard").scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+function deleteEmployee(id){
+  const target = employees.find(e => String(e.id) === String(id));
+  if(!target) return;
+  if(!canEditEmployee(target)){ showToast("Only the person who added this profile can delete it"); return; }
+  if(!window.confirm(`Delete ${target.name} from the directory? This can't be undone.`)) return;
+
+  if(syncMode === "live" && employeesRef){
+    employeesRef.doc(String(id)).delete()
+      .then(()=> showToast(`${target.name} removed — synced to everyone on this link`))
+      .catch(err=>{
+        console.error("Delete failed:", err);
+        showToast("Couldn't delete — check your connection");
+      });
+    // onSnapshot listener handles the re-render once the delete lands.
+    return;
+  }
+
+  employees = employees.filter(e => String(e.id) !== String(id));
+  showToast(`${target.name} removed (local-only)`);
+  rerenderEverything();
+}
+document.getElementById("btnCancelAddEmployee").addEventListener("click", ()=>{
+  editingEmployeeId = null;
+  document.getElementById("addEmployeeCard").style.display = "none";
+});
+document.body.addEventListener("click", (ev)=>{
+  const btn = ev.target.closest("[data-action]");
+  if(!btn) return;
+  const id = btn.dataset.id;
+  if(btn.dataset.action === "edit") openEditEmployeeForm(id);
+  if(btn.dataset.action === "delete") deleteEmployee(id);
+  if(btn.dataset.action === "view") openProfileModal(id);
+});
+document.getElementById("btnAddEmployee").addEventListener("click", ()=>{
+  const data = {};
+  document.querySelectorAll("#addEmployeeForm input[data-key], #addEmployeeForm select[data-key]").forEach(inp=>{
+    data[inp.dataset.key] = inp.value.trim();
+  });
+  if(!data.name){ showToast("Name is required"); return; }
+
+  const isEditing = !!editingEmployeeId;
+  const existing = isEditing ? employees.find(e => String(e.id) === String(editingEmployeeId)) : null;
+  if(isEditing && !existing){ showToast("That profile no longer exists"); return; }
+  if(isEditing && !canEditEmployee(existing)){ showToast("Only the person who added this profile can edit it"); return; }
+
+  const { programs: newEmpPrograms, rotations: newEmpRotations } = readProgramsAndRotations("newEmp");
+  const fields = {
+    name:data.name, preferredName:data.preferredName||"", email:data.email||"", currentRole:data.currentRole||"",
+    currentTeam:data.currentTeam||"", school:data.school||"",
+    joinYear:data.joinYear||"", hometownCity:data.hometownCity||"", hometownState:data.hometownState||"",
+    hometownCountry:data.hometownCountry||"", hometownRegion:data.hometownRegion||"",
+    locationCity:data.locationCity||"", locationState:data.locationState||"",
+    locationCountry:data.locationCountry||"", locationRegion:data.locationRegion||"",
+    previousEmployer:"",
+    photoUrl:pendingNewEmployeePhoto||"",
+    previousDellTeam:csvToArr(data.previousDellTeam), skills:csvToArr(data.skills), interests:csvToArr(data.interests),
+    languages:csvToArr(data.languages), certifications:csvToArr(data.certifications),
+    ergs: getCheckedErgs("newEmpErgCheckboxes"), careerGoals:csvToArr(data.careerGoals),
+    openToConnectAbout: csvToArr(data.openToConnectAbout),
+    mentorAvailable: document.getElementById("newEmpMentorCheckbox").checked,
+    wantsMentor: document.getElementById("newEmpWantsMentorCheckbox").checked,
+    programs: newEmpPrograms, rotations: newEmpRotations
+  };
+
+  const record = isEditing
+    ? { ...existing, ...fields, id: existing.id, createdBy: existing.createdBy || null }
+    : emp({ ...fields, createdBy: currentUser ? currentUser.uid : null });
+
+  if(isEditing){
+    employees = employees.map(e => String(e.id) === String(record.id) ? record : e);
+  } else {
+    employees.push(record);
+  }
+
+  renderAddEmployeeForm();
+  editingEmployeeId = null;
+  document.getElementById("addEmployeeCard").style.display = "none";
+
+  if(syncMode === "live" && employeesRef){
+    employeesRef.doc(String(record.id)).set(record)
+      .then(()=> showToast(isEditing ? `${record.name} updated` : `${record.name} added — synced to everyone on this link`))
+      .catch(err=>{
+        console.error("Save failed:", err);
+        showToast(`${record.name} saved locally, but sync failed`);
+      });
+    // onSnapshot listener re-renders everything once the write lands, so skip local re-render here.
+    return;
+  }
+
+  showToast(isEditing ? `${record.name} updated (local-only)` : `${record.name} added to the directory (local-only — add a Firebase config to sync this)`);
+  renderDirectory();
+  renderDashboard();
+  rebuildChipFilters();
+});
+
+/* =========================================================
+   DIRECTORY (Search + Chip Filters + Cards) — Section 12/13
+========================================================= */
+let activeChips = { school:new Set(), location:new Set(), interests:new Set(), careerGoals:new Set(), ergs:new Set() };
+
+function rebuildChipFilters(){
+  const groups = [
+    {key:"school", label:"Schools", values:uniqueVals(e=>e.school)},
+    {key:"location", label:"Locations", values:uniqueVals(e=>[formatLocation(e.locationCity,e.locationState,e.locationCountry), formatLocation(e.hometownCity,e.hometownState,e.hometownCountry)])},
+    {key:"interests", label:"Interests", values:uniqueVals(e=>e.interests)},
+    {key:"careerGoals", label:"Career Goals", values:uniqueVals(e=>e.careerGoals)},
+    {key:"ergs", label:"ERGs", values:uniqueVals(e=>e.ergs)},
+  ];
+  const wrap = document.getElementById("chipFilters");
+  wrap.innerHTML = "";
+  groups.forEach(g=>{
+    if(!g.values.length) return;
+    const label = document.createElement("div");
+    label.className = "chip-group-label";
+    label.textContent = g.label;
+    wrap.appendChild(label);
+    const row = document.createElement("div");
+    row.className = "chips";
+    g.values.forEach(v=>{
+      const btn = document.createElement("button");
+      btn.className = "chip" + (activeChips[g.key].has(v) ? " on" : "");
+      btn.textContent = v;
+      btn.addEventListener("click", ()=>{
+        if(activeChips[g.key].has(v)) activeChips[g.key].delete(v);
+        else activeChips[g.key].add(v);
+        rebuildChipFilters();
+        renderDirectory();
+      });
+      row.appendChild(btn);
+    });
+    wrap.appendChild(row);
+  });
+}
+
+function matchesChips(e){
+  const checks = [
+    activeChips.school.size===0 || activeChips.school.has(e.school),
+    activeChips.location.size===0 || activeChips.location.has(formatLocation(e.locationCity,e.locationState,e.locationCountry)) || activeChips.location.has(formatLocation(e.hometownCity,e.hometownState,e.hometownCountry)),
+    activeChips.interests.size===0 || e.interests.some(i=>activeChips.interests.has(i)),
+    activeChips.careerGoals.size===0 || e.careerGoals.some(i=>activeChips.careerGoals.has(i)),
+    activeChips.ergs.size===0 || e.ergs.some(i=>activeChips.ergs.has(i)),
+  ];
+  return checks.every(Boolean);
+}
+
+function containsToken(haystack, token){
+  // Short tokens (state codes like "CO", "TX") are collision-prone as raw substrings
+  // ("CO" sits inside "Coffee" and "Consulting"), so require a whole-word match for
+  // anything 3 characters or shorter. Longer queries keep substring matching so
+  // partial words like "Aust" still find "Austin".
+  haystack = (haystack||"").toLowerCase();
+  token = (token||"").toLowerCase().trim();
+  if(!token) return false;
+  if(token.length <= 3){
+    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`\\b${escaped}\\b`).test(haystack);
+  }
+  return haystack.includes(token);
+}
+
+function textSearchMatch(e, q){
+  if(!q) return true;
+  const haystack = [
+    e.name, e.email, e.currentRole, e.currentTeam, e.school,
+    e.hometownCity, e.hometownState, e.locationCity, e.locationState, ...asArray(e.previousDellTeam), e.joinYear,
+    ...asArray(e.skills), ...asArray(e.interests), ...asArray(e.ergs), ...asArray(e.careerGoals)
+  ].join(" ");
+  return containsToken(haystack, q);
+}
+
+function modalRow(label, valueHTML){
+  if(!valueHTML) return "";
+  return `<div class="modal-row"><div class="modal-row-label">${label}</div><div class="modal-row-value">${valueHTML}</div></div>`;
+}
+function modalTagRow(label, arr){
+  if(!Array.isArray(arr)) arr = arr ? [arr] : [];
+  if(!arr.length) return "";
+  return modalRow(label, `<div class="tag-row" style="margin:0;">${arr.map(t=>`<span class="tag">${t}</span>`).join("")}</div>`);
+}
+function buildProfileModalHTML(e){
+  const hometown = formatLocation(e.hometownCity, e.hometownState, e.hometownCountry);
+  const location = formatLocation(e.locationCity, e.locationState, e.locationCountry);
+  const schoolLine = e.school || "";
+  return `
+    <div class="modal-header">
+      ${avatarHTML(e, 72)}
+      <div>
+        <p class="modal-name">${e.name}${e.preferredName ? ` <span style="font-weight:500;color:var(--ink-soft);">(${e.preferredName})</span>` : ""}</p>
+        <p class="modal-role">${[e.currentRole, e.currentTeam].filter(Boolean).join(" · ") || "—"}</p>
+      </div>
+    </div>
+    ${modalRow("Email", e.email ? `<a href="mailto:${e.email}" style="color:var(--blue);">${e.email}</a>` : "")}
+    ${modalRow("School", schoolLine)}
+    ${modalRow("Year Joined Dell", e.joinYear)}
+    ${modalRow("Hometown", hometown)}
+    ${modalRow("Current Location", location)}
+    ${modalTagRow("Past Roles / Teams", e.previousDellTeam)}
+    ${modalTagRow("Skills", e.skills)}
+    ${modalTagRow("Interests", e.interests)}
+    ${modalTagRow("Languages", e.languages)}
+    ${modalTagRow("Certifications", e.certifications)}
+    ${modalTagRow("ERGs", e.ergs)}
+    ${modalTagRow("Career Goals", e.careerGoals)}
+    ${modalTagRow("Open To Connect About", e.openToConnectAbout)}
+    ${modalRow("Wants to Be a Mentor", e.mentorAvailable ? "Yes" : "No")}
+    ${modalRow("Wants a Mentor", e.wantsMentor ? "Yes" : "No")}
+    ${modalProgramsSection(e)}
+  `;
+}
+function modalProgramsSection(e){
+  if(!e.programs) return "";
+  const active = PROGRAM_DEFS.filter(p => e.programs[p.key]);
+  if(!active.length) return "";
+  const blocks = active.map(p=>{
+    const rotations = (e.rotations && e.rotations[p.key]) || [];
+    const rotationsText = rotations.length ? rotations.join(", ") : "No rotations listed";
+    return `<div style="margin-bottom:8px;"><b>${p.label}</b><br><span style="color:var(--ink-soft);">Rotations: ${rotationsText}</span></div>`;
+  }).join("");
+  return modalRow("Development Programs", blocks);
+}
+function openProfileModal(id){
+  const target = employees.find(e => String(e.id) === String(id));
+  if(!target){ showToast("Couldn't find that profile"); return; }
+  document.getElementById("profileModalBody").innerHTML = buildProfileModalHTML(target);
+  document.getElementById("profileModal").style.display = "flex";
+}
+function closeProfileModal(){
+  document.getElementById("profileModal").style.display = "none";
+}
+document.getElementById("profileModalClose").addEventListener("click", closeProfileModal);
+document.getElementById("profileModal").addEventListener("click", (ev)=>{
+  if(ev.target.id === "profileModal") closeProfileModal();
+});
+document.addEventListener("keydown", (ev)=>{
+  if(ev.key === "Escape") closeProfileModal();
+});
+
+function empCardHTML(e, opts){
+  opts = opts || {};
+  return `
+  <div class="emp-card">
+    <div class="emp-head" data-action="view" data-id="${e.id}" style="cursor:pointer;">
+      ${avatarHTML(e)}
+      <div>
+        <p class="emp-name">${e.name}</p>
+        <p class="emp-role">${e.currentRole || "—"} · ${e.currentTeam || "—"}</p>
+      </div>
+    </div>
+    <div class="emp-meta">
+      <div><b>School:</b> ${e.school || "—"}</div>
+      <div><b>Location:</b> ${formatLocation(e.locationCity,e.locationState,e.locationCountry) || "—"} <span style="color:#9AA5B4;">(from ${formatLocation(e.hometownCity,e.hometownState,e.hometownCountry)||"—"})</span></div>
+      ${e.joinYear ? `<div><b>Joined Dell:</b> ${e.joinYear}</div>` : ""}
+    </div>
+    <div class="tag-row">
+      ${asArray(e.ergs).map(t=>`<span class="tag">${t}</span>`).join("")}
+      ${asArray(e.interests).slice(0,3).map(t=>`<span class="tag">${t}</span>`).join("")}
+      ${e.mentorAvailable ? `<span class="tag mentor">Mentor Available</span>` : ""}
+      ${e.programs ? PROGRAM_DEFS.filter(p=>e.programs[p.key]).map(p=>`<span class="tag mentor">${p.key.toUpperCase()}</span>`).join("") : ""}
+      ${canEditEmployee(e) ? `<span class="tag" style="background:#E8F8F0;color:var(--green);">You added this</span>` : ""}
+    </div>
+    <div class="emp-actions">
+      <a class="btn btn-ghost btn-sm" href="mailto:${e.email||''}">✉ Email</a>
+      ${canEditEmployee(e) ? `
+        <button class="btn btn-outline btn-sm" data-action="edit" data-id="${e.id}">Edit</button>
+        <button class="btn btn-outline btn-sm" data-action="delete" data-id="${e.id}" style="color:#C0392B;border-color:#F3C7C0;">Delete</button>
+      ` : ""}
+      ${opts.extraButton || ""}
+    </div>
+  </div>`;
+}
+
+function renderDirectory(){
+  rebuildChipFilters();
+  const q = document.getElementById("directorySearch").value.trim();
+  const grid = document.getElementById("directoryGrid");
+  try{
+    const results = employees.filter(e=> textSearchMatch(e,q) && matchesChips(e));
+    document.getElementById("directoryResultsMeta").textContent = `${results.length} of ${employees.length} employees`;
+    grid.innerHTML = results.length ? results.map(e=>empCardHTML(e)).join("") :
+      `<div class="empty-state" style="grid-column:1/-1;">No employees match your filters. Try clearing a chip or search term.</div>`;
+  } catch(err){
+    console.error("Directory search failed:", err);
+    document.getElementById("directoryResultsMeta").textContent = "";
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;color:#C0392B;">Search hit an error and couldn't update: ${err.message || err}. Check the browser console for details.</div>`;
+  }
+}
+document.getElementById("directorySearch").addEventListener("input", renderDirectory);
+
+/* =========================================================
+   AI SEARCH — Sections 3 & 4
+========================================================= */
+// Terms that should never be treated as a distinct, searchable skill category —
+// even if some employee's own profile literally lists it. This doesn't touch
+// anyone's actual data, it just stops the search from recognizing the term as a
+// matchable concept.
+const EXCLUDED_SKILL_TERMS = ["sox"];
+
+function buildVocab(){
+  return {
+    school: uniqueVals(e=>e.school),
+    location: uniqueVals(e=>employeeLocationValues(e)),
+    currentTeam: uniqueVals(e=>[e.currentTeam, ...asArray(e.previousDellTeam)]),
+    currentRole: uniqueVals(e=>e.currentRole),
+    interests: uniqueVals(e=>e.interests),
+    ergs: uniqueVals(e=>e.ergs),
+    careerGoals: uniqueVals(e=>e.careerGoals),
+    skills: uniqueVals(e=>e.skills).filter(v => !EXCLUDED_SKILL_TERMS.includes(v.toLowerCase())),
+  };
+}
+
+function findTokenIndex(haystack, token){
+  token = (token||"").toLowerCase().trim();
+  if(!token) return -1;
+  if(token.length <= 3){
+    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`\\b${escaped}\\b`);
+    const m = re.exec(haystack);
+    return m ? m.index : -1;
+  }
+  return haystack.indexOf(token);
+}
+
+// Known equivalent terms — abbreviation and full form, or short/long department
+// names — so it doesn't matter which version an employee's record holds or which
+// version someone types, both resolve to the same match. Each group is tagged to
+// the category it applies to, since "IR" means something different as a career
+// goal (Investor Relations) than it would as, say, a school.
+const SYNONYM_GROUPS = [
+  { cat:"currentTeam", terms:["Global Audit", "Global Audit & Transformation", "Global Audit and Transformation", "GAT"] },
+  { cat:"school", terms:["UT Austin", "University of Texas at Austin", "University of Texas"] },
+  { cat:"school", terms:["Texas A&M", "Texas A&M University"] },
+  { cat:"school", terms:["SMU", "Southern Methodist University"] },
+  { cat:"school", terms:["UTEP", "University of Texas at El Paso"] },
+  { cat:"school", terms:["Georgia Tech", "Georgia Institute of Technology"] },
+  { cat:"school", terms:["Texas Tech", "Texas Tech University"] },
+  { cat:"skills", terms:["M&A", "Mergers and Acquisitions", "Mergers & Acquisitions"] },
+  { cat:"skills", terms:["SQL", "Structured Query Language"] },
+  { cat:"skills", terms:["KPI", "Key Performance Indicator", "Key Performance Indicators"] },
+  { cat:"skills", terms:["ROI", "Return on Investment"] },
+  { cat:"careerGoals", terms:["FP&A", "Financial Planning & Analysis", "Financial Planning and Analysis"] },
+  { cat:"careerGoals", terms:["IR", "Investor Relations"] },
+];
+function findSynonymGroup(cat, value){
+  return SYNONYM_GROUPS.find(g => g.cat === cat && g.terms.some(t => t.toLowerCase() === value.toLowerCase()));
+}
+function expandSynonyms(cat, value){
+  const group = findSynonymGroup(cat, value);
+  return group ? group.terms : [value];
+}
+
+const ACRONYM_SKIP_WORDS = new Set(["of","the","at","and","for","in","on","a","an"]);
+function deriveAcronym(phrase){
+  const letters = (phrase||"")
+    .split(/[\s&]+/)
+    .map(w => w.replace(/[^a-zA-Z0-9]/g, ""))
+    .filter(w => w && !ACRONYM_SKIP_WORDS.has(w.toLowerCase()))
+    .map(w => w[0]);
+  // Only worth treating as an acronym if it actually abbreviates multiple words —
+  // a single word's first letter isn't a meaningful abbreviation of anything.
+  return letters.length >= 2 ? letters.join("").toUpperCase() : "";
+}
+// Builds { cat: { "ACRONYM": "Original Full Value" } } for every category, derived
+// fresh from whatever's currently in the data. If two different values in the same
+// category would derive to the same acronym, neither gets one — an ambiguous
+// auto-derived match is worse than no match at all.
+function buildAcronymMap(vocab){
+  const map = {};
+  Object.keys(vocab).forEach(cat=>{
+    map[cat] = {};
+    const seen = {};
+    vocab[cat].forEach(v=>{
+      const acro = deriveAcronym(v);
+      if(!acro) return;
+      if(seen[acro] && seen[acro] !== v){ map[cat][acro] = null; return; } // collision — disable
+      seen[acro] = v;
+      map[cat][acro] = v;
+    });
+  });
+  return map;
+}
+
+// People commonly drop trailing qualifier words entirely — "Baylor" instead of
+// "Baylor University", "Georgia Tech" instead of "Georgia Institute of Technology
+// Atlanta" — especially inside a full sentence, where neither of the two matching
+// passes above helps: the stored value has extra words the query never uses, and
+// the query is too long to fit inside the stored value as a whole. This catches
+// that by recognizing just the leading word(s) of a multi-word value on its own.
+// Same collision rule as acronyms: if two different values share the same leading
+// word, neither auto-matches on it.
+function firstWord(phrase){
+  const parts = (phrase||"").trim().split(/\s+/);
+  return parts.length >= 2 ? parts[0] : "";
+}
+function buildFirstWordMap(vocab){
+  const map = {};
+  Object.keys(vocab).forEach(cat=>{
+    map[cat] = {};
+    const seen = {};
+    vocab[cat].forEach(v=>{
+      const fw = firstWord(v);
+      if(!fw) return;
+      const key = fw.toLowerCase();
+      if(seen[key] && seen[key] !== v){ map[cat][key] = null; return; } // collision — disable
+      seen[key] = v;
+      map[cat][key] = v;
+    });
+  });
+  return map;
+}
+
+// Role titles put the meaningful word ("Intern", "Manager", "Analyst") wherever it
+// falls naturally, not always first — "CFO Intern" has it last. Unlike the acronym/
+// first-word maps above, ambiguity here is fine and expected: searching "Manager"
+// should reasonably return everyone whose role contains that word, not just one.
+const WORD_MATCH_SKIP_WORDS = new Set(["a","an","the","of","and","for","in","on","at"]);
+function buildWordMap(vocab, cat){
+  const map = {};
+  (vocab[cat]||[]).forEach(v=>{
+    (v||"").split(/\s+/).forEach(w=>{
+      const clean = w.replace(/[^a-zA-Z0-9]/g, "");
+      if(clean.length < 3 || WORD_MATCH_SKIP_WORDS.has(clean.toLowerCase())) return;
+      const key = clean.toLowerCase();
+      if(!map[key]) map[key] = new Set();
+      map[key].add(v);
+    });
+  });
+  return map;
+}
+
+function interpretQuery(query){
+  const q = " " + query.toLowerCase() + " ";
+  const vocab = buildVocab();
+  const matched = { school:[], location:[], currentTeam:[], currentRole:[], interests:[], ergs:[], careerGoals:[], skills:[] };
+
+  // One flat list across every category, longest phrase first. A longer match claims
+  // its full character span in the query; any shorter match whose span falls inside
+  // an already-claimed region is skipped, so a single named phrase (like a full team
+  // name) can't also get chopped up into an accidental second-category match.
+  let candidates = [];
+  Object.keys(vocab).forEach(cat=>{
+    vocab[cat].forEach(v=>{ if(v) candidates.push({ cat, token:v, value:v }); });
+  });
+  // Every synonym group's terms are added as their own candidates (not remapped to
+  // a single canonical value), so any spelling is recognized as one unit whether
+  // it's sitting in the query, in the stored data, or both.
+  SYNONYM_GROUPS.forEach(group=>{
+    group.terms.forEach(term=> candidates.push({ cat:group.cat, token:term, value:term }));
+  });
+  // Auto-derived acronyms (first letter of each significant word) for any multi-word
+  // value currently in the data — not a fixed list, this regenerates from whatever
+  // schools/teams/skills actually exist right now, so new data gets the same
+  // treatment without needing a manual entry added for it.
+  // ERGs come from a fixed canonical checkbox list, not free text, so there's no
+  // spelling variance to guess at — auto-derived abbreviations here only risk false
+  // positives (e.g. "Asians in Action" incidentally deriving something that
+  // collides with an unrelated word in someone's query).
+  const acronymMap = buildAcronymMap(vocab);
+  Object.keys(acronymMap).forEach(cat=>{
+    if(cat === "ergs") return;
+    Object.keys(acronymMap[cat]).forEach(acro=>{
+      const fullValue = acronymMap[cat][acro];
+      if(fullValue) candidates.push({ cat, token:acro, value:fullValue });
+    });
+  });
+  const firstWordMap = buildFirstWordMap(vocab);
+  Object.keys(firstWordMap).forEach(cat=>{
+    if(cat === "ergs") return;
+    Object.keys(firstWordMap[cat]).forEach(fw=>{
+      const fullValue = firstWordMap[cat][fw];
+      if(fullValue) candidates.push({ cat, token:fw, value:fullValue });
+    });
+  });
+  const roleWordMap = buildWordMap(vocab, "currentRole");
+  Object.keys(roleWordMap).forEach(word=>{
+    roleWordMap[word].forEach(fullValue=>{
+      candidates.push({ cat:"currentRole", token:word, value:fullValue });
+    });
+  });
+  candidates.sort((a,b)=> b.token.length - a.token.length);
+
+  // Tracks which CATEGORY claimed each character, not just whether it's claimed —
+  // this is the key difference from before. Two matches in the SAME category (the
+  // literal "Baylor" some employees have, and "Baylor University" others have) are
+  // allowed to both claim the same word, since that's a genuine, useful ambiguity,
+  // not the kind of accidental cross-category collision this exists to prevent
+  // (a team name accidentally absorbing an unrelated skill's word).
+  const claimedBy = new Array(q.length).fill(null);
+  candidates.forEach(({cat, token, value})=>{
+    const idx = findTokenIndex(q, token);
+    if(idx === -1) return;
+    const endIdx = idx + token.toLowerCase().trim().length;
+    for(let i=idx;i<endIdx;i++){ if(claimedBy[i] && claimedBy[i] !== cat) return; }
+    for(let i=idx;i<endIdx;i++){ claimedBy[i] = cat; }
+    if(!matched[cat].includes(value)) matched[cat].push(value);
+  });
+
+  // Reverse direction: someone typing a short/partial term ("Baylor", "GAT")
+  // against a longer stored value ("Baylor University", "Sarbanes-Oxley")
+  // never gets caught above, since the stored value can't fit inside a shorter query.
+  // This checks whether the whole (trimmed) query instead fits inside each stored value.
+  // Only meaningfully fires for short queries — a full sentence is never a substring of
+  // a single stored field — so it's additive and doesn't fight the logic above.
+  const trimmedQuery = query.trim();
+  if(trimmedQuery){
+    Object.keys(vocab).forEach(cat=>{
+      vocab[cat].forEach(v=>{
+        if(!v || matched[cat].includes(v)) return;
+        if(containsToken(v, trimmedQuery)) matched[cat].push(v);
+      });
+    });
+    SYNONYM_GROUPS.forEach(group=>{
+      group.terms.forEach(term=>{
+        if(!matched[group.cat].includes(term) && containsToken(term, trimmedQuery)){
+          matched[group.cat].push(term);
+        }
+      });
+    });
+  }
+
+  // Whichever spelling actually matched, pull in every other known form of the same
+  // real thing, so filtering catches a record regardless of which exact variant is
+  // stored on it — abbreviation or spelled out, short name or long name.
+  Object.keys(matched).forEach(cat=>{
+    matched[cat] = [...new Set(matched[cat].flatMap(v => expandSynonyms(cat, v)))];
+  });
+
+  // keyword heuristics
+  let mentorship = false, auditors = false;
+  if(/mentor/.test(q)) mentorship = true;
+  if(/auditor/.test(q)) auditors = true;
+
+  return { matched, mentorship, auditors };
+}
+
+function fieldMatchesAny(fieldValue, matchedList){
+  // Exact-equality matching breaks the moment someone's stored value has any extra
+  // formatting around a recognized term — "Global Audit & Transformation (GAT)"
+  // is not string-equal to "Global Audit & Transformation", so it silently fails
+  // to match even though it's obviously the same team. This checks containment in
+  // both directions instead of requiring the two strings to be identical.
+  if(!fieldValue) return false;
+  return matchedList.some(m => fieldValue === m || containsToken(fieldValue, m) || containsToken(m, fieldValue));
+}
+
+function runAISearch(query, interp){
+  const { matched, mentorship, auditors } = interp;
+  return employees.filter(e=>{
+    const checks = [];
+    if(matched.school.length) checks.push(fieldMatchesAny(e.school, matched.school));
+    if(matched.location.length) checks.push(employeeLocationValues(e).some(v=>matched.location.includes(v)));
+    if(matched.currentTeam.length) checks.push(fieldMatchesAny(e.currentTeam, matched.currentTeam) || asArray(e.previousDellTeam).some(t=>fieldMatchesAny(t, matched.currentTeam)));
+    if(matched.currentRole.length) checks.push(fieldMatchesAny(e.currentRole, matched.currentRole));
+    if(matched.interests.length) checks.push(e.interests.some(i=>fieldMatchesAny(i, matched.interests)));
+    if(matched.ergs.length) checks.push(e.ergs.some(i=>fieldMatchesAny(i, matched.ergs)));
+    if(matched.careerGoals.length) checks.push(e.careerGoals.some(i=>fieldMatchesAny(i, matched.careerGoals)));
+    if(matched.skills.length) checks.push(e.skills.some(i=>fieldMatchesAny(i, matched.skills)));
+    if(mentorship) checks.push(e.openToConnectAbout.includes("Mentorship") || e.mentorAvailable);
+    if(auditors) checks.push(/audit/i.test(e.currentTeam) || asArray(e.previousDellTeam).some(t=>/audit/i.test(t)) || /audit/i.test(e.currentRole));
+
+    if(checks.length === 0){
+      // fallback to plain text search across all fields
+      return textSearchMatch(e, query);
+    }
+    return checks.every(Boolean);
+  });
+}
+
+function renderAISearch(){
+  const query = document.getElementById("aiSearchInput").value.trim();
+  const interpCard = document.getElementById("aiInterp");
+  const emptyMsg = document.getElementById("aiInterpEmpty");
+  const grid = document.getElementById("aiResultsGrid");
+  const meta = document.getElementById("aiResultsMeta");
+
+  if(!query){
+    interpCard.innerHTML = "";
+    emptyMsg.style.display = "block";
+    grid.innerHTML = "";
+    meta.textContent = "";
+    return;
+  }
+
+  try{
+    const interp = interpretQuery(query);
+    const results = runAISearch(query, interp);
+
+    const labelMap = {school:"School", location:"Location", currentTeam:"Team", currentRole:"Role", interests:"Interest", ergs:"ERG", careerGoals:"Career Goal", skills:"Skill"};
+    let tags = [];
+    Object.keys(interp.matched).forEach(cat=>{
+      if(interp.matched[cat].length){
+        tags.push(`<div class="interp-tag">${labelMap[cat]} = <b>${interp.matched[cat].join(" / ")}</b></div>`);
+      }
+    });
+    if(interp.mentorship) tags.push(`<div class="interp-tag">Intent = <b>Mentorship</b></div>`);
+    if(interp.auditors) tags.push(`<div class="interp-tag">Role = <b>Audit</b></div>`);
+    tags.push(`<div class="interp-tag">Matches Found = <b>${results.length}</b></div>`);
+
+    interpCard.innerHTML = tags.join("");
+    emptyMsg.style.display = "none";
+    meta.textContent = `${results.length} match${results.length===1?"":"es"} for "${query}"`;
+    grid.innerHTML = results.length ? results.map(e=>empCardHTML(e)).join("") :
+      `<div class="empty-state" style="grid-column:1/-1;">No matches yet. Try a broader phrase like a school name or interest.</div>`;
+  } catch(err){
+    // A thrown error here used to leave whatever was on screen from the previous
+    // search frozen in place, since the code never reached the lines that update
+    // the grid. Now it clears stale results and shows what actually happened.
+    console.error("AI search failed:", err);
+    interpCard.innerHTML = "";
+    emptyMsg.style.display = "none";
+    meta.textContent = "";
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;color:#C0392B;">Search hit an error and couldn't update: ${err.message || err}. Check the browser console for details.</div>`;
+  }
+}
+document.getElementById("aiSearchInput").addEventListener("input", renderAISearch);
+document.querySelectorAll(".example-chip").forEach(chip=>{
+  chip.addEventListener("click", ()=>{
+    document.getElementById("aiSearchInput").value = chip.textContent;
+    renderAISearch();
+  });
+});
+
+/* =========================================================
+   MATCH RECOMMENDATIONS — Sections 5, 6, 7
+========================================================= */
+function computeMatch(target){
+  let score = 0;
+  const reasons = [];
+
+  if(profile.school && target.school === profile.school){ score += 15; reasons.push("Same School"); }
+  const profileHometown = formatLocation(profile.hometownCity, profile.hometownState, profile.hometownCountry);
+  const profileLocation = formatLocation(profile.locationCity, profile.locationState, profile.locationCountry);
+  if(profileHometown && profileHometown === formatLocation(target.hometownCity, target.hometownState, target.hometownCountry)){ score += 10; reasons.push("Same Hometown"); }
+  if(profileLocation && profileLocation === formatLocation(target.locationCity, target.locationState, target.locationCountry)){ score += 10; reasons.push("Same Location"); }
+
+  const sharedInterests = asArray(target.interests).filter(i=>asArray(profile.interests).includes(i));
+  sharedInterests.forEach(i=>{ score += 5; reasons.push(`Shared Interest: ${i}`); });
+
+  const sharedSkills = asArray(target.skills).filter(i=>asArray(profile.skills).includes(i));
+  sharedSkills.forEach(i=>{ score += 5; reasons.push(`Shared Skill: ${i}`); });
+
+  const sharedGoals = asArray(target.careerGoals).filter(i=>asArray(profile.careerGoals).includes(i));
+  if(sharedGoals.length){ score += 8; reasons.push("Same Career Goal"); }
+
+  const sharedErg = asArray(target.ergs).filter(i=>asArray(profile.ergs).includes(i));
+  if(sharedErg.length){ score += 8; reasons.push(`Shared ERG: ${sharedErg[0]}`); }
+
+  if(target.mentorAvailable){ score += 5; reasons.push("Available Mentor"); }
+
+  return { score: Math.min(score, 100), reasons };
+}
+
+function generateIntro(target, reasons){
+  const [firstName] = target.name.split(" ");
+  const you = profile.name || "Quentin Vega";
+  const sharedBits = [];
+  if(profile.school && target.school === profile.school) sharedBits.push(`attended ${profile.school}`);
+  const sharedInterests = asArray(target.interests).filter(i=>asArray(profile.interests).includes(i));
+  if(sharedInterests.length) sharedBits.push(`share interests in ${sharedInterests.slice(0,2).join(" and ").toLowerCase()}`);
+  const sharedLine = sharedBits.length ? `I noticed we both ${sharedBits.join(" and ")}.` : `I came across your profile and thought it'd be great to connect.`;
+  const goalLine = (profile.careerGoals && profile.careerGoals.length) ? `I am currently exploring ${profile.careerGoals[0]} opportunities and would love to learn more about your experience.` : `I'd love to learn more about your experience at Dell.`;
+
+  return `Hi ${firstName},
+
+I discovered your profile through Dell Connect AI.
+
+${sharedLine}
+
+${goalLine}
+
+Would you be open to a quick coffee chat?
+
+Thanks,
+${you}`;
+}
+
+function renderRecommendations(){
+  const list = document.getElementById("recList");
+  if(!profile.name && !profile.school && !asArray(profile.interests).length){
+    list.innerHTML = `<div class="card"><div class="empty-state">Fill out <b>My Profile</b> first — recommendations are built entirely from your school, interests, skills, career goals, and ERGs.</div></div>`;
+    return;
+  }
+  const ranked = employees
+    .filter(e=>String(e.id) !== String(myEmployeeId))
+    .map(e=>({ e, ...computeMatch(e) }))
+    .sort((a,b)=>b.score-a.score)
+    .slice(0,5);
+
+  list.innerHTML = ranked.map(({e, score, reasons})=>`
+    <div class="card rec-card">
+      <div class="score-badge">${score}%</div>
+      <div class="rec-main">
+        <div class="emp-head" style="margin-bottom:6px;cursor:pointer;" data-action="view" data-id="${e.id}">
+          ${avatarHTML(e)}
+          <div>
+            <p class="emp-name">${e.name}</p>
+            <p class="emp-role">${e.currentRole || "—"} · ${e.currentTeam || "—"}</p>
+          </div>
+        </div>
+        <p class="card-sub" style="margin-bottom:0;">Why We Matched</p>
+        <ul class="why-list">${reasons.length ? reasons.map(r=>`<li>${r}</li>`).join("") : "<li>New connection to explore</li>"}</ul>
+        <div class="emp-actions" style="margin-top:12px;">
+          <a class="btn btn-ghost btn-sm" href="mailto:${e.email||''}">✉ Email</a>
+          <button class="btn btn-primary btn-sm gen-intro-btn">Generate Introduction</button>
+        </div>
+        <div class="intro-box"></div>
+      </div>
+    </div>
+  `).join("");
+
+  document.querySelectorAll(".gen-intro-btn").forEach((btn, idx)=>{
+    btn.addEventListener("click", ()=>{
+      const { e, reasons } = ranked[idx];
+      const box = btn.closest(".rec-card").querySelector(".intro-box");
+      box.textContent = generateIntro(e, reasons);
+      box.style.display = "block";
+    });
+  });
+}
+
+/* =========================================================
+   ERGs — Section 9
+========================================================= */
+function renderERGs(){
+  const allErgs = ERG_OPTIONS;
+  const recGrid = document.getElementById("ergRecGrid");
+  const allGrid = document.getElementById("ergAllGrid");
+
+  const recs = [];
+  allErgs.forEach(erg=>{
+    if(asArray(profile.ergs).includes(erg)) return; // already a member
+    let reason = null;
+    const membersWithErg = employees.filter(e=>e.ergs.includes(erg));
+    const sharedInterest = membersWithErg.flatMap(e=>e.interests).find(i=>asArray(profile.interests).includes(i));
+    const sharedGoal = membersWithErg.flatMap(e=>e.careerGoals).find(g=>asArray(profile.careerGoals).includes(g));
+    if(sharedInterest) reason = `Shared interest: ${sharedInterest}`;
+    else if(sharedGoal) reason = `Aligned career goal: ${sharedGoal}`;
+    else if(profile.school && membersWithErg.some(e=>e.school===profile.school)) reason = `Fellow ${profile.school} alumni are active here`;
+    if(reason) recs.push({ erg, reason });
+  });
+  const finalRecs = recs.slice(0,6);
+  recGrid.innerHTML = finalRecs.length ? finalRecs.map(r=>`
+    <div class="erg-card"><h4>${r.erg}</h4><p>Reason: ${r.reason}</p></div>
+  `).join("") : `<div class="empty-state" style="grid-column:1/-1;">Complete your profile to get personalized ERG matches.</div>`;
+
+  allGrid.innerHTML = allErgs.map(erg=>{
+    const count = employees.filter(e=>e.ergs.includes(erg)).length;
+    return `<div class="erg-card" data-erg="${erg}" style="cursor:pointer;"><h4>${erg}</h4><p>${count} member${count===1?"":"s"} in the network</p></div>`;
+  }).join("");
+
+  document.querySelectorAll("#ergAllGrid .erg-card").forEach(card=>{
+    card.addEventListener("click", ()=>{
+      const erg = card.dataset.erg;
+      const members = employees.filter(e=>e.ergs.includes(erg));
+      document.getElementById("ergPeopleTitle").textContent = `${erg}: ${members.length} member${members.length===1?"":"s"}`;
+      document.getElementById("ergPeopleGrid").innerHTML = members.length ? members.map(e=>empCardHTML(e)).join("") :
+        `<div class="empty-state" style="grid-column:1/-1;">No members yet.</div>`;
+      document.getElementById("ergPeopleCard").style.display = "block";
+      document.getElementById("ergPeopleCard").scrollIntoView({behavior:"smooth", block:"nearest"});
+    });
+  });
+}
+
+/* =========================================================
+   CAREER PATHS — Section 10
+========================================================= */
+/* =========================================================
+   DASHBOARD / ANALYTICS — Section 11
+========================================================= */
+function mostCommon(getter){
+  const counts = {};
+  employees.forEach(e=>{
+    const v = getter(e);
+    const arr = Array.isArray(v) ? v : [v];
+    arr.forEach(x=>{ if(x) counts[x] = (counts[x]||0)+1; });
+  });
+  let best = null, bestCount = 0;
+  Object.keys(counts).forEach(k=>{ if(counts[k] > bestCount){ best = k; bestCount = counts[k]; } });
+  return { value: best || "—", count: bestCount };
+}
+
+function renderDashboard(){
+  document.getElementById("dashCount").textContent = `${employees.length} employees`;
+
+  const stats = [
+    { label:"Total Employees", value: employees.length, goto:"directory" },
+    { label:"Total Schools", value: uniqueVals(e=>e.school).length, goto:"directory" },
+    { label:"Total ERGs", value: uniqueVals(e=>e.ergs).length, goto:"ergs" },
+    { label:"Total Locations", value: uniqueVals(e=>[formatLocation(e.locationCity,e.locationState,e.locationCountry), formatLocation(e.hometownCity,e.hometownState,e.hometownCountry)]).length, goto:"directory" },
+  ];
+  document.getElementById("statGrid").innerHTML = stats.map(s=>`
+    <div class="stat-card" data-goto="${s.goto}" style="cursor:pointer;"><div class="stat-num">${s.value}</div><div class="stat-label">${s.label}</div></div>
+  `).join("");
+
+  const commonSchool = mostCommon(e=>e.school);
+  const commonInterest = mostCommon(e=>e.interests);
+  const commonTeam = mostCommon(e=>e.currentTeam);
+  document.getElementById("mostCommonGrid").innerHTML = `
+    <div class="stat-card" data-goto="directory" style="cursor:pointer;"><div class="stat-num" style="font-size:18px;">${commonSchool.value}</div><div class="stat-label">Most Common School (${commonSchool.count})</div></div>
+    <div class="stat-card" data-goto="directory" style="cursor:pointer;"><div class="stat-num" style="font-size:18px;">${commonInterest.value}</div><div class="stat-label">Most Common Interest (${commonInterest.count})</div></div>
+    <div class="stat-card" data-goto="directory" style="cursor:pointer;"><div class="stat-num" style="font-size:18px;">${commonTeam.value}</div><div class="stat-label">Most Common Team (${commonTeam.count})</div></div>
+  `;
+}
+
+/* =========================================================
+   INIT
+========================================================= */
+function rerenderEverything(){
+  renderDashboard();
+  rebuildChipFilters();
+  renderDirectory();
+  renderAISearch();
+  renderRecommendations();
+  renderERGs();
+  refreshSchoolDatalist();
+}
+
+function setSyncBanner(mode, text){
+  syncMode = mode;
+  const el = document.getElementById("syncBanner");
+  el.style.display = "block";
+  const colors = { local:"#C77700", syncing:"#5B6675", live:"#1E9E6B", error:"#C0392B" };
+  el.style.color = colors[mode] || "#5B6675";
+  el.textContent = text;
+}
+
+function startLocalMode(reason){
+  setSyncBanner("local", reason || "Running local-only: added employees stay in this browser tab and disappear on refresh. Add a Firebase config to sync everyone in real time.");
+  renderAuthArea();
+  // No auth backend exists in local mode, so there's nothing real to gate — let the app through.
+  document.getElementById("authGate").style.display = "none";
+  document.getElementById("appRoot").style.display = "flex";
+}
+
+function isDellEmail(email){
+  return (email||"").toLowerCase().trim().endsWith("@dell.com");
+}
+
+function signUpEmail(email, password){
+  return auth.createUserWithEmailAndPassword(email, password).then(cred=>{
+    if(!isDellEmail(cred.user.email)){
+      return cred.user.delete().then(()=>{
+        throw { code: "auth/not-dell-domain", message: "Please sign up with a @dell.com email address." };
+      });
+    }
+    return cred.user.sendEmailVerification().catch(err=>{
+      console.error("Verification email failed to send:", err);
+    });
+  });
+}
+
+function signInEmail(email, password){
+  if(!isDellEmail(email)){
+    return Promise.reject({ code: "auth/not-dell-domain", message: "Please sign in with a @dell.com email address." });
+  }
+  return auth.signInWithEmailAndPassword(email, password);
+}
+
+function signOutUser(){
+  if(auth) auth.signOut();
+}
+
+document.getElementById("verifyContinueBtn").addEventListener("click", ()=>{
+  const errEl = document.getElementById("verifyGateError");
+  errEl.style.display = "none";
+  const user = auth && auth.currentUser;
+  if(!user){ return; }
+  user.reload().then(()=>{
+    if(auth.currentUser.emailVerified){
+      // onAuthStateChanged doesn't refire just from reload() — force the same
+      // routing logic it normally handles, now that the token is up to date.
+      currentUser = auth.currentUser;
+      document.getElementById("verifyEmailGate").style.display = "none";
+      document.getElementById("appRoot").style.display = "flex";
+      migrateLegacyLocationFields();
+      rerenderEverything();
+      renderAuthArea();
+    } else {
+      errEl.textContent = "Still not verified — check your inbox (and spam folder) for the link, then try again.";
+      errEl.style.display = "block";
+    }
+  }).catch(err=>{
+    console.error("Verification check failed:", err);
+    errEl.textContent = "Couldn't check verification status. Try again in a moment.";
+    errEl.style.display = "block";
+  });
+});
+document.getElementById("verifyResendBtn").addEventListener("click", ()=>{
+  const errEl = document.getElementById("verifyGateError");
+  errEl.style.display = "none";
+  const user = auth && auth.currentUser;
+  if(!user){ return; }
+  user.sendEmailVerification().then(()=>{
+    showToast("Verification email sent");
+  }).catch(err=>{
+    console.error("Resend failed:", err);
+    errEl.textContent = "Couldn't resend right now — wait a bit and try again.";
+    errEl.style.display = "block";
+  });
+});
+document.getElementById("verifySignOutLink").addEventListener("click", (ev)=>{
+  ev.preventDefault();
+  signOutUser();
+});
+
+function friendlyAuthError(err){
+  const map = {
+    "auth/email-already-in-use": "That email already has an account — try signing in instead.",
+    "auth/invalid-email": "That doesn't look like a valid email address.",
+    "auth/weak-password": "Password needs to be at least 6 characters.",
+    "auth/wrong-password": "Incorrect password.",
+    "auth/user-not-found": "No account found for that email — try creating one.",
+    "auth/too-many-requests": "Too many attempts. Wait a bit and try again.",
+    "auth/not-dell-domain": err.message
+  };
+  return map[err.code] || (err.message || "Something went wrong. Try again.");
+}
+
+let authMode = "signin"; // "signin" | "signup"
+
+const PASSWORD_REQUIREMENTS = [
+  { id:"reqLength", label:"At least 8 characters", test: pw => pw.length >= 8 },
+  { id:"reqUpper", label:"One uppercase letter", test: pw => /[A-Z]/.test(pw) },
+  { id:"reqLower", label:"One lowercase letter", test: pw => /[a-z]/.test(pw) },
+  { id:"reqNumber", label:"One number", test: pw => /[0-9]/.test(pw) },
+  { id:"reqSpecial", label:"One special character (!@#$ etc.)", test: pw => /[^A-Za-z0-9]/.test(pw) },
+];
+function passwordMeetsPolicy(pw){
+  return PASSWORD_REQUIREMENTS.every(r => r.test(pw));
+}
+function updatePasswordChecklist(){
+  const pw = document.getElementById("authPassword").value;
+  PASSWORD_REQUIREMENTS.forEach(r=>{
+    const el = document.getElementById(r.id);
+    const ok = r.test(pw);
+    el.style.color = ok ? "var(--green)" : "var(--ink-soft)";
+    el.textContent = (ok ? "✓ " : "○ ") + r.label;
+  });
+}
+document.getElementById("authPassword").addEventListener("input", updatePasswordChecklist);
+
+function updateAuthGateUI(){
+  document.getElementById("authSubmitBtn").textContent = authMode === "signin" ? "Sign In" : "Create Account";
+  document.getElementById("authToggleLabel").textContent = authMode === "signin" ? "New here?" : "Already have an account?";
+  document.getElementById("authToggleLink").textContent = authMode === "signin" ? "Create an account" : "Sign in instead";
+  document.getElementById("authGateError").style.display = "none";
+  document.getElementById("authPasswordChecklist").style.display = authMode === "signup" ? "block" : "none";
+  document.getElementById("authSignupWarning").style.display = authMode === "signup" ? "block" : "none";
+  if(authMode === "signup") updatePasswordChecklist();
+}
+document.getElementById("authToggleLink").addEventListener("click", (ev)=>{
+  ev.preventDefault();
+  authMode = authMode === "signin" ? "signup" : "signin";
+  updateAuthGateUI();
+});
+document.getElementById("authSubmitBtn").addEventListener("click", ()=>{
+  const email = document.getElementById("authEmail").value.trim();
+  const password = document.getElementById("authPassword").value;
+  const errEl = document.getElementById("authGateError");
+  errEl.style.display = "none";
+  if(!email || !password){
+    errEl.textContent = "Enter both an email and a password.";
+    errEl.style.display = "block";
+    return;
+  }
+  if(authMode === "signup" && !passwordMeetsPolicy(password)){
+    errEl.textContent = "Password doesn't meet all the requirements listed below yet.";
+    errEl.style.display = "block";
+    return;
+  }
+  if(!auth){
+    errEl.textContent = FIREBASE_CONFIGURED
+      ? "Firebase is configured but failed to connect — see the status message above for the specific error."
+      : "Sign-in isn't configured yet — the Firebase config at the top of this file still has placeholder values.";
+    errEl.style.display = "block";
+    return;
+  }
+  const action = authMode === "signin" ? signInEmail(email, password) : signUpEmail(email, password);
+  action.catch(err=>{
+    console.error("Auth error:", err);
+    errEl.textContent = friendlyAuthError(err);
+    errEl.style.display = "block";
+  });
+});
+
+function renderAuthArea(){
+  const el = document.getElementById("authArea");
+  if(!FIREBASE_CONFIGURED){
+    el.innerHTML = `Sign-in is off in local-only mode — everything here is editable by you alone anyway.`;
+    return;
+  }
+  if(currentUser){
+    el.innerHTML = `
+      <div style="font-weight:700;margin-bottom:2px;word-break:break-all;">${currentUser.email || "Signed in"}</div>
+      <button class="btn btn-sm" style="background:rgba(255,255,255,.18);color:#fff;width:100%;margin-top:8px;" id="btnSignOut">Sign Out</button>`;
+    document.getElementById("btnSignOut").addEventListener("click", signOutUser);
+  } else {
+    el.innerHTML = `Not signed in.`;
+  }
+}
+
+const STATE_ABBR_MAP = {
+  AL:"Alabama", AK:"Alaska", AZ:"Arizona", AR:"Arkansas", CA:"California", CO:"Colorado",
+  CT:"Connecticut", DE:"Delaware", FL:"Florida", GA:"Georgia", HI:"Hawaii", ID:"Idaho",
+  IL:"Illinois", IN:"Indiana", IA:"Iowa", KS:"Kansas", KY:"Kentucky", LA:"Louisiana",
+  ME:"Maine", MD:"Maryland", MA:"Massachusetts", MI:"Michigan", MN:"Minnesota",
+  MS:"Mississippi", MO:"Missouri", MT:"Montana", NE:"Nebraska", NV:"Nevada",
+  NH:"New Hampshire", NJ:"New Jersey", NM:"New Mexico", NY:"New York", NC:"North Carolina",
+  ND:"North Dakota", OH:"Ohio", OK:"Oklahoma", OR:"Oregon", PA:"Pennsylvania",
+  RI:"Rhode Island", SC:"South Carolina", SD:"South Dakota", TN:"Tennessee", TX:"Texas",
+  UT:"Utah", VT:"Vermont", VA:"Virginia", WA:"Washington", WV:"West Virginia",
+  WI:"Wisconsin", WY:"Wyoming", DC:"District of Columbia"
+};
+function splitCityStateLegacy(val){
+  if(!val) return ["", ""];
+  if(val.includes(",")){
+    const [city, state] = val.split(",", 2);
+    const cleanState = (state||"").trim();
+    const fullState = STATE_ABBR_MAP[cleanState.toUpperCase()] || cleanState;
+    return [city.trim(), fullState];
+  }
+  return [val.trim(), ""];
+}
+
+let hasRunLegacyMigration = false;
+function migrateLegacyLocationFields(){
+  if(!employeesRef || hasRunLegacyMigration) return;
+  hasRunLegacyMigration = true;
+  employeesRef.get().then(snapshot=>{
+    const toFix = [];
+    let skippedOwned = 0;
+    snapshot.forEach(doc=>{
+      const d = doc.data();
+
+      // A single atomic batch fails ENTIRELY if even one write in it gets rejected
+      // by security rules. Records owned by someone else legitimately can't be
+      // touched by whoever's currently signed in, so those must be left out
+      // entirely rather than included and silently blocking every other fix too.
+      const isOwnedBySomeoneElse = d.createdBy && (!currentUser || d.createdBy !== currentUser.uid);
+      if(isOwnedBySomeoneElse){ skippedOwned++; return; }
+
+      const needsHometown = !d.hometownCity && d.hometown;
+      const needsLocation = !d.locationCity && d.location;
+      const updates = {};
+
+      if(needsHometown){
+        const [city, state] = splitCityStateLegacy(d.hometown);
+        updates.hometownCity = city; updates.hometownState = state;
+      }
+      if(needsLocation){
+        const [city, state] = splitCityStateLegacy(d.location);
+        updates.locationCity = city; updates.locationState = state;
+      }
+
+      // Already split into City/State, but the state is still a bare abbreviation
+      // (e.g. seeded before the full-name convention, or someone typed "TX" by hand).
+      if(!needsHometown && d.hometownState){
+        const full = STATE_ABBR_MAP[d.hometownState.trim().toUpperCase()];
+        if(full && full !== d.hometownState) updates.hometownState = full;
+      }
+      if(!needsLocation && d.locationState){
+        const full = STATE_ABBR_MAP[d.locationState.trim().toUpperCase()];
+        if(full && full !== d.locationState) updates.locationState = full;
+      }
+
+      // Records from before Region/Country existed used a US-only state dropdown,
+      // so if they have a city/state but no country on file, they're necessarily
+      // US-based — safe to backfill rather than leave them unsearchable by country.
+      if(d.hometownCity && !d.hometownCountry){
+        updates.hometownCountry = "United States";
+        updates.hometownRegion = "AMER";
+      }
+      if(d.locationCity && !d.locationCountry){
+        updates.locationCountry = "United States";
+        updates.locationRegion = "AMER";
+      }
+
+      // previousDellTeam used to be a single string before it became a multi-value list.
+      // Any record still holding the old string shape gets converted to an array here.
+      if(d.previousDellTeam !== undefined && !Array.isArray(d.previousDellTeam)){
+        updates.previousDellTeam = d.previousDellTeam
+          ? String(d.previousDellTeam).split(",").map(s=>s.trim()).filter(Boolean)
+          : [];
+      }
+
+      if(Object.keys(updates).length){
+        toFix.push({ ref: doc.ref, updates });
+      }
+    });
+
+    if(skippedOwned > 0){
+      console.log(`Skipped ${skippedOwned} record(s) owned by someone else — not something the current sign-in can fix.`);
+    }
+    if(toFix.length === 0) return;
+
+    // Independent per-document updates instead of one atomic batch, so a single
+    // unexpected failure can't silently block every other record's fix.
+    return Promise.allSettled(toFix.map(({ref, updates}) => ref.update(updates))).then(results=>{
+      const succeeded = results.filter(r => r.status === "fulfilled").length;
+      const failed = results.filter(r => r.status === "rejected");
+      if(failed.length){
+        console.error(`${failed.length} record(s) failed to migrate:`, failed.map(f=>f.reason));
+      }
+      if(succeeded > 0){
+        console.log(`Migrated ${succeeded} employee record(s) to the current data schema.`);
+        showToast(`Fixed data on ${succeeded} profile${succeeded===1?"":"s"}`);
+      }
+    });
+  }).catch(err=>{
+    console.error(`Legacy migration failed — code: ${err.code || "unknown"}, message: ${err.message || err}`, err);
+    // This is a best-effort background cleanup, not something that should interrupt
+    // every session with a visible error. It'll keep quietly retrying each time you
+    // sign in, and will succeed silently once whatever's actually wrong is fixed.
+  });
+}
+
+function startFirebaseSync(){
+  setSyncBanner("syncing", "Connecting to shared directory...");
+  document.getElementById("authGateLocalNote").style.display = "none";
+  const statusEl = document.getElementById("authConnectionStatus");
+  statusEl.style.display = "block";
+  statusEl.style.color = "var(--ink-soft)";
+  statusEl.textContent = "Connecting to sign-in service...";
+  try{
+    const app = firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    employeesRef = db.collection("employees");
+    auth = firebase.auth();
+    statusEl.style.display = "none";
+
+    auth.onAuthStateChanged(user=>{
+      currentUser = user;
+      renderAuthArea();
+      if(user && user.emailVerified){
+        document.getElementById("authGate").style.display = "none";
+        document.getElementById("verifyEmailGate").style.display = "none";
+        document.getElementById("appRoot").style.display = "flex";
+        migrateLegacyLocationFields();
+      } else if(user && !user.emailVerified){
+        document.getElementById("authGate").style.display = "none";
+        document.getElementById("appRoot").style.display = "none";
+        document.getElementById("verifyEmailGate").style.display = "flex";
+        document.getElementById("verifyEmailAddress").textContent = user.email || "";
+      } else {
+        document.getElementById("appRoot").style.display = "none";
+        document.getElementById("verifyEmailGate").style.display = "none";
+        document.getElementById("authGate").style.display = "flex";
+        document.getElementById("authEmail").value = "";
+        document.getElementById("authPassword").value = "";
+      }
+      rerenderEverything();
+    });
+
+    employeesRef.limit(1).get().then(snapshot=>{
+      if(snapshot.empty){
+        // First person to connect seeds the shared directory once.
+        const batch = db.batch();
+        SEED_EMPLOYEES.forEach(e=>{
+          batch.set(employeesRef.doc(String(e.id)), e);
+        });
+        return batch.commit();
+      }
+    }).catch(err=>{
+      console.error("Seed failed:", err);
+    });
+
+    employeesRef.onSnapshot(snapshot=>{
+      employees = snapshot.docs.map(d=>d.data());
+      setSyncBanner("live", `Live — synced with everyone using this link (${employees.length} employees).`);
+      rerenderEverything();
+    }, err=>{
+      console.error("Sync error:", err);
+      startLocalMode("Couldn't reach the shared directory (check your Firebase config and Firestore rules). Falling back to local-only mode.");
+    });
+  } catch(err){
+    console.error("Firebase init failed:", err);
+    statusEl.style.display = "block";
+    statusEl.style.color = "#C0392B";
+    statusEl.textContent = `Firebase failed to connect: ${err.message || err}`;
+    setSyncBanner("error", "Firebase connection failed — see the message on the sign-in screen.");
+  }
+}
+
+function loadProfileFromLocalStorage(){
+  try{
+    const saved = localStorage.getItem("dellConnectProfile");
+    if(saved) Object.assign(profile, JSON.parse(saved));
+  } catch(err){ console.error("Could not load saved profile:", err); }
+
+  // Older saved profiles (before "list" fields like previousDellTeam existed) may have
+  // stored a plain string instead of an array. Coerce anything list-typed back into an
+  // array so rendering never crashes on a stale localStorage shape.
+  FORM_SECTIONS.forEach(section=>{
+    section.fields.forEach(f=>{
+      if(!f.list) return;
+      const v = profile[f.key];
+      if(!Array.isArray(v)){
+        profile[f.key] = v ? String(v).split(",").map(s=>s.trim()).filter(Boolean) : [];
+      }
+    });
+  });
+}
+function saveProfileToLocalStorage(){
+  try{
+    localStorage.setItem("dellConnectProfile", JSON.stringify(profile));
+  } catch(err){ console.error("Could not save profile:", err); }
+}
+
+let myEmployeeId = null;
+try{ myEmployeeId = localStorage.getItem("dellConnectMyEmployeeId") || null; } catch(err){ myEmployeeId = null; }
+
+function syncProfileToDirectory(){
+  if(!profile.name) return; // nothing worth publishing yet
+
+  if(!myEmployeeId){
+    myEmployeeId = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+    try{ localStorage.setItem("dellConnectMyEmployeeId", myEmployeeId); } catch(err){ console.error(err); }
+  }
+
+  const record = {
+    id: myEmployeeId, name: profile.name, preferredName: profile.preferredName, email: profile.email, currentRole: profile.currentRole,
+    currentTeam: profile.currentTeam, school: profile.school,
+    joinYear: profile.joinYear, hometownCity: profile.hometownCity, hometownState: profile.hometownState,
+    hometownCountry: profile.hometownCountry, hometownRegion: profile.hometownRegion,
+    locationCity: profile.locationCity, locationState: profile.locationState,
+    locationCountry: profile.locationCountry, locationRegion: profile.locationRegion,
+    previousEmployer: "",
+    previousDellTeam: profile.previousDellTeam, skills: profile.skills, interests: profile.interests,
+    languages: profile.languages, certifications: profile.certifications,
+    ergs: profile.ergs, careerGoals: profile.careerGoals, openToConnectAbout: profile.openToConnectAbout,
+    mentorAvailable: profile.mentorAvailable, wantsMentor: profile.wantsMentor, programs: profile.programs, rotations: profile.rotations,
+    photoUrl: profile.photoUrl,
+    createdBy: currentUser ? currentUser.uid : (FIREBASE_CONFIGURED ? null : "self")
+  };
+
+  const idx = employees.findIndex(e => String(e.id) === String(myEmployeeId));
+  if(idx >= 0) employees[idx] = record; else employees.push(record);
+
+  if(syncMode === "live" && employeesRef){
+    if(!currentUser){
+      showToast("Profile saved locally — sign in to sync it to the shared directory");
+      rerenderEverything();
+      return;
+    }
+    employeesRef.doc(String(myEmployeeId)).set(record)
+      .catch(err => console.error("Profile sync to directory failed:", err));
+    // onSnapshot picks up the change and re-renders once it lands.
+    return;
+  }
+
+  rerenderEverything();
+}
+
+function refreshSchoolDatalist(){
+  const known = uniqueVals(e=>e.school); // any school already used by an actual employee, seed or added
+  const combined = [...new Set([...SCHOOL_OPTIONS, ...known])].filter(Boolean).sort();
+  document.getElementById("schoolDatalist").innerHTML = combined.map(s=>`<option value="${s}">`).join("");
+}
+refreshSchoolDatalist();
+
+loadProfileFromLocalStorage();
+renderProfileForm();
+renderAddEmployeeForm();
+rerenderEverything();
+
+if(FIREBASE_CONFIGURED){
+  startFirebaseSync();
+} else {
+  startLocalMode();
+}
+</script>
+</body>
+</html>
