@@ -1004,7 +1004,7 @@ function openEditEmployeeForm(id){
   document.getElementById("addEmployeeCardSub").textContent = "Changes save to this profile directly.";
   document.getElementById("btnAddEmployee").textContent = "Save Changes";
   document.getElementById("addEmployeeCard").style.display = "block";
-  document.getElementById("addEmployeeCard").scrollIntoView({behavior:"smooth", block:"start"});
+  try{ document.getElementById("addEmployeeCard").scrollIntoView({behavior:"smooth", block:"start"}); } catch(err){ /* not critical if unsupported */ }
 }
 
 function deleteEmployee(id){
@@ -1167,12 +1167,26 @@ function containsToken(haystack, token){
   return haystack.includes(token);
 }
 
+function employeeProgramValues(e){
+  if(!e.programs) return [];
+  const vals = [];
+  PROGRAM_DEFS.forEach(p=>{
+    if(e.programs[p.key]){
+      vals.push(p.label);           // "Financial Development Program (FDP)"
+      vals.push(p.key.toUpperCase()); // "FDP"
+      asArray(e.rotations && e.rotations[p.key]).forEach(r => vals.push(r));
+    }
+  });
+  return vals;
+}
+
 function textSearchMatch(e, q){
   if(!q) return true;
   const haystack = [
     e.name, e.email, e.currentRole, e.currentTeam, e.school,
     e.hometownCity, e.hometownState, e.locationCity, e.locationState, ...asArray(e.previousDellTeam), e.joinYear,
-    ...asArray(e.skills), ...asArray(e.interests), ...asArray(e.ergs), ...asArray(e.careerGoals)
+    ...asArray(e.skills), ...asArray(e.interests), ...asArray(e.ergs), ...asArray(e.careerGoals),
+    ...employeeProgramValues(e)
   ].join(" ");
   return containsToken(haystack, q);
 }
@@ -1314,6 +1328,7 @@ function buildVocab(){
     ergs: uniqueVals(e=>e.ergs),
     careerGoals: uniqueVals(e=>e.careerGoals),
     skills: uniqueVals(e=>e.skills).filter(v => !EXCLUDED_SKILL_TERMS.includes(v.toLowerCase())),
+    programs: uniqueVals(e=>employeeProgramValues(e)),
   };
 }
 
@@ -1439,7 +1454,7 @@ function buildWordMap(vocab, cat){
 function interpretQuery(query){
   const q = " " + query.toLowerCase() + " ";
   const vocab = buildVocab();
-  const matched = { school:[], location:[], currentTeam:[], currentRole:[], interests:[], ergs:[], careerGoals:[], skills:[] };
+  const matched = { school:[], location:[], currentTeam:[], currentRole:[], interests:[], ergs:[], careerGoals:[], skills:[], programs:[] };
 
   // One flat list across every category, longest phrase first. A longer match claims
   // its full character span in the query; any shorter match whose span falls inside
@@ -1563,6 +1578,7 @@ function runAISearch(query, interp){
     if(matched.ergs.length) checks.push(e.ergs.some(i=>fieldMatchesAny(i, matched.ergs)));
     if(matched.careerGoals.length) checks.push(e.careerGoals.some(i=>fieldMatchesAny(i, matched.careerGoals)));
     if(matched.skills.length) checks.push(e.skills.some(i=>fieldMatchesAny(i, matched.skills)));
+    if(matched.programs.length) checks.push(employeeProgramValues(e).some(i=>fieldMatchesAny(i, matched.programs)));
     if(mentorship) checks.push(e.openToConnectAbout.includes("Mentorship") || e.mentorAvailable);
     if(auditors) checks.push(/audit/i.test(e.currentTeam) || asArray(e.previousDellTeam).some(t=>/audit/i.test(t)) || /audit/i.test(e.currentRole));
 
@@ -1593,7 +1609,7 @@ function renderAISearch(){
     const interp = interpretQuery(query);
     const results = runAISearch(query, interp);
 
-    const labelMap = {school:"School", location:"Location", currentTeam:"Team", currentRole:"Role", interests:"Interest", ergs:"ERG", careerGoals:"Career Goal", skills:"Skill"};
+    const labelMap = {school:"School", location:"Location", currentTeam:"Team", currentRole:"Role", interests:"Interest", ergs:"ERG", careerGoals:"Career Goal", skills:"Skill", programs:"Program"};
     let tags = [];
     Object.keys(interp.matched).forEach(cat=>{
       if(interp.matched[cat].length){
