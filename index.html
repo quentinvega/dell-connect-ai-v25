@@ -495,7 +495,7 @@ let profile = {
   photoUrl:"", previousDellTeam:[],
   skills:[], interests:[], languages:[], certifications:[], ergs:[], careerGoals:[], openToConnectAbout:[], mentorAvailable:false, wantsMentor:false,
   programs:{fdp:false, frp:false, adp:false, fap:false, flp:false}, rotations:{fdp:[], frp:[], adp:[], fap:[], flp:[]},
-  alumni:{fdp:false, frp:false, adp:false, fap:false, flp:false}
+  alumni:{fdp:false, frp:false, adp:false, fap:false, flp:false}, alumniRotations:{fdp:[], frp:[], adp:[], fap:[], flp:[]}
 };
 
 /* =========================================================
@@ -727,26 +727,34 @@ const PROGRAM_DEFS = [
   { key:"fap", label:"Finance Advance Program (FAP)", hasRotations:false },
   { key:"flp", label:"Finance Leadership Program (FLP)", hasRotations:false },
 ];
-function programBlockHTML(prefix, key, label, checked, rotations, hasRotations, isAlumni){
+function programBlockHTML(prefix, key, label, checked, rotations, hasRotations, isAlumni, alumniRotations){
   rotations = rotations || [];
-  const rotationInputs = [0,1,2,3].map(i=>
-    `<input type="text" class="rotation-input" data-program="${key}" data-index="${i}" placeholder="Rotation ${i+1} (optional)" value="${(rotations[i]||"").replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:12.5px;margin-bottom:6px;background:#fff;">`
-  ).join("");
+  alumniRotations = alumniRotations || [];
+  function rotationInputsHTML(cssClass, values){
+    return [0,1,2,3].map(i=>
+      `<input type="text" class="${cssClass}" data-program="${key}" data-index="${i}" placeholder="Rotation ${i+1} (optional)" value="${(values[i]||"").replace(/"/g,'&quot;')}" style="width:100%;box-sizing:border-box;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:12.5px;margin-bottom:6px;background:#fff;">`
+    ).join("");
+  }
   const rotationsBoxHTML = hasRotations ? `
       <div class="rotations-box" id="${prefix}Rotations_${key}" style="display:${checked ? "block" : "none"};margin:10px 0 0 23px;padding:12px;background:#FBFCFE;border:1px solid var(--border);border-radius:8px;">
         <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:8px;">Rotations</div>
-        ${rotationInputs}
+        ${rotationInputsHTML("rotation-input", rotations)}
+      </div>` : "";
+  const alumniRotationsBoxHTML = hasRotations ? `
+      <div class="rotations-box" id="${prefix}AlumniRotations_${key}" style="display:${isAlumni ? "block" : "none"};margin:10px 0 0 23px;padding:12px;background:#FBFCFE;border:1px solid var(--border);border-radius:8px;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:8px;">Rotations (as Alumni)</div>
+        ${rotationInputsHTML("alumni-rotation-input", alumniRotations)}
       </div>` : "";
   return `
     <div class="program-block" style="border:1px solid var(--border);border-radius:9px;padding:10px 12px;">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
         <input type="checkbox" class="program-checkbox" id="${prefix}Program_${key}" data-program="${key}" style="width:15px;height:15px;" ${checked ? "checked" : ""}>
         <span style="font-weight:600;color:var(--ink-soft);font-size:12.5px;">${label}</span>
-      </label>
+      </label>${rotationsBoxHTML}
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:8px;">
         <input type="checkbox" class="program-alumni-checkbox" id="${prefix}Alumni_${key}" data-program="${key}" style="width:15px;height:15px;" ${isAlumni ? "checked" : ""}>
         <span style="font-weight:500;color:var(--ink-soft);font-size:12px;">Alumni</span>
-      </label>${rotationsBoxHTML}
+      </label>${alumniRotationsBoxHTML}
     </div>`;
 }
 function wireProgramCheckboxes(prefix){
@@ -756,12 +764,18 @@ function wireProgramCheckboxes(prefix){
     if(cb && box){
       cb.addEventListener("change", ()=>{ box.style.display = cb.checked ? "block" : "none"; });
     }
+    const alumniCb = document.getElementById(`${prefix}Alumni_${key}`);
+    const alumniBox = document.getElementById(`${prefix}AlumniRotations_${key}`);
+    if(alumniCb && alumniBox){
+      alumniCb.addEventListener("change", ()=>{ alumniBox.style.display = alumniCb.checked ? "block" : "none"; });
+    }
   });
 }
 function readProgramsAndRotations(prefix){
   const programs = {};
   const rotations = {};
   const alumni = {};
+  const alumniRotations = {};
   PROGRAM_DEFS.forEach(({key})=>{
     const cb = document.getElementById(`${prefix}Program_${key}`);
     programs[key] = cb ? cb.checked : false;
@@ -769,8 +783,10 @@ function readProgramsAndRotations(prefix){
     rotations[key] = [...inputs].map(i=>i.value.trim()).filter(Boolean);
     const alumniCb = document.getElementById(`${prefix}Alumni_${key}`);
     alumni[key] = alumniCb ? alumniCb.checked : false;
+    const alumniInputs = document.querySelectorAll(`#${prefix}AlumniRotations_${key} .alumni-rotation-input`);
+    alumniRotations[key] = [...alumniInputs].map(i=>i.value.trim()).filter(Boolean);
   });
-  return { programs, rotations, alumni };
+  return { programs, rotations, alumni, alumniRotations };
 }
 
 function fieldValueFor(f, source){
@@ -856,12 +872,13 @@ function appendProgramsWidget(sectionDiv, prefix, source){
   const programs = (source && source.programs) || {fdp:false, frp:false, adp:false, fap:false, flp:false};
   const rotations = (source && source.rotations) || {fdp:[], frp:[], adp:[], fap:[], flp:[]};
   const alumni = (source && source.alumni) || {fdp:false, frp:false, adp:false, fap:false, flp:false};
+  const alumniRotations = (source && source.alumniRotations) || {fdp:[], frp:[], adp:[], fap:[], flp:[]};
   const div = document.createElement("div");
   div.className = "field";
   div.style.gridColumn = "1 / -1";
   div.innerHTML = `<label>Development Programs</label>
     <div style="display:flex;flex-direction:column;gap:10px;">
-      ${PROGRAM_DEFS.map(p => programBlockHTML(prefix, p.key, p.label, programs[p.key], rotations[p.key], p.hasRotations, alumni[p.key])).join("")}
+      ${PROGRAM_DEFS.map(p => programBlockHTML(prefix, p.key, p.label, programs[p.key], rotations[p.key], p.hasRotations, alumni[p.key], alumniRotations[p.key])).join("")}
     </div>`;
   sectionDiv.appendChild(div);
   wireProgramCheckboxes(prefix);
@@ -978,6 +995,7 @@ document.getElementById("btnUpdateProfile").addEventListener("click", ()=>{
   profile.programs = profileProgramData.programs;
   profile.rotations = profileProgramData.rotations;
   profile.alumni = profileProgramData.alumni;
+  profile.alumniRotations = profileProgramData.alumniRotations;
   profile.ergs = getCheckedErgs("profileErgCheckboxes");
   saveProfileToLocalStorage();
   syncProfileToDirectory();
@@ -1064,7 +1082,7 @@ document.getElementById("btnAddEmployee").addEventListener("click", ()=>{
   if(isEditing && !existing){ showToast("That profile no longer exists"); return; }
   if(isEditing && !canEditEmployee(existing)){ showToast("Only the person who added this profile can edit it"); return; }
 
-  const { programs: newEmpPrograms, rotations: newEmpRotations, alumni: newEmpAlumni } = readProgramsAndRotations("newEmp");
+  const { programs: newEmpPrograms, rotations: newEmpRotations, alumni: newEmpAlumni, alumniRotations: newEmpAlumniRotations } = readProgramsAndRotations("newEmp");
   const fields = {
     name:data.name, preferredName:data.preferredName||"", email:data.email||"", currentRole:data.currentRole||"",
     currentTeam:data.currentTeam||"", school:data.school||"",
@@ -1080,7 +1098,7 @@ document.getElementById("btnAddEmployee").addEventListener("click", ()=>{
     openToConnectAbout: csvToArr(data.openToConnectAbout),
     mentorAvailable: document.getElementById("newEmpMentorCheckbox").checked,
     wantsMentor: document.getElementById("newEmpWantsMentorCheckbox").checked,
-    programs: newEmpPrograms, rotations: newEmpRotations, alumni: newEmpAlumni
+    programs: newEmpPrograms, rotations: newEmpRotations, alumni: newEmpAlumni, alumniRotations: newEmpAlumniRotations
   };
 
   const record = isEditing
@@ -1180,16 +1198,17 @@ function containsToken(haystack, token){
 }
 
 function employeeProgramValues(e){
-  if(!e.programs) return [];
+  if(!e.programs && !e.alumni) return [];
   const vals = [];
   PROGRAM_DEFS.forEach(p=>{
-    if(e.programs[p.key]){
+    if(e.programs && e.programs[p.key]){
       vals.push(p.label);           // "Financial Development Program (FDP)"
       vals.push(p.key.toUpperCase()); // "FDP"
       asArray(e.rotations && e.rotations[p.key]).forEach(r => vals.push(r));
     }
     if(e.alumni && e.alumni[p.key]){
       vals.push(`${p.key.toUpperCase()} Alumni`); // "FDP Alumni"
+      asArray(e.alumniRotations && e.alumniRotations[p.key]).forEach(r => vals.push(r));
     }
   });
   return vals;
@@ -1255,8 +1274,14 @@ function modalProgramsSection(e){
     const statusText = [isActive ? "Active" : null, isAlumni ? "Alumni" : null].filter(Boolean).join(" · ");
     let rotationsLine = "";
     if(p.hasRotations){
-      const rotations = (e.rotations && e.rotations[p.key]) || [];
-      rotationsLine = `<br><span style="color:var(--ink-soft);">Rotations: ${rotations.length ? rotations.join(", ") : "No rotations listed"}</span>`;
+      if(isActive){
+        const rotations = (e.rotations && e.rotations[p.key]) || [];
+        rotationsLine += `<br><span style="color:var(--ink-soft);">Rotations: ${rotations.length ? rotations.join(", ") : "No rotations listed"}</span>`;
+      }
+      if(isAlumni){
+        const alumniRotations = (e.alumniRotations && e.alumniRotations[p.key]) || [];
+        rotationsLine += `<br><span style="color:var(--ink-soft);">Rotations (as Alumni): ${alumniRotations.length ? alumniRotations.join(", ") : "No rotations listed"}</span>`;
+      }
     }
     return `<div style="margin-bottom:8px;"><b>${p.label}</b> <span style="color:var(--ink-soft);">(${statusText})</span>${rotationsLine}</div>`;
   }).join("");
@@ -2274,7 +2299,7 @@ function syncProfileToDirectory(){
     previousDellTeam: profile.previousDellTeam, skills: profile.skills, interests: profile.interests,
     languages: profile.languages, certifications: profile.certifications,
     ergs: profile.ergs, careerGoals: profile.careerGoals, openToConnectAbout: profile.openToConnectAbout,
-    mentorAvailable: profile.mentorAvailable, wantsMentor: profile.wantsMentor, programs: profile.programs, rotations: profile.rotations, alumni: profile.alumni,
+    mentorAvailable: profile.mentorAvailable, wantsMentor: profile.wantsMentor, programs: profile.programs, rotations: profile.rotations, alumni: profile.alumni, alumniRotations: profile.alumniRotations,
     photoUrl: profile.photoUrl,
     createdBy: currentUser ? currentUser.uid : (FIREBASE_CONFIGURED ? null : "self")
   };
