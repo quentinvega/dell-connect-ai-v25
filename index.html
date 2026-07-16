@@ -2100,6 +2100,16 @@ const STATE_ABBR_MAP = {
   UT:"Utah", VT:"Vermont", VA:"Virginia", WA:"Washington", WV:"West Virginia",
   WI:"Wisconsin", WY:"Wyoming", DC:"District of Columbia"
 };
+// Names used before ERGs became a fixed checkbox list, mapped to their canonical
+// replacement. Anyone whose record still has one of these gets remapped by the
+// migration below.
+const LEGACY_ERG_MAP = {
+  "Asian Network": "Asians in Action",
+  "Hispanic ERG": "Latino Connection",
+  "Pride ERG": "Pride",
+  "Veterans ERG": "Veterans & Supporters",
+};
+
 function splitCityStateLegacy(val){
   if(!val) return ["", ""];
   if(val.includes(",")){
@@ -2170,6 +2180,15 @@ function migrateLegacyLocationFields(){
         updates.previousDellTeam = d.previousDellTeam
           ? String(d.previousDellTeam).split(",").map(s=>s.trim()).filter(Boolean)
           : [];
+      }
+
+      // ERGs used to be free text before the fixed 14-item checkbox list existed.
+      // Any record still holding an old name (typed before that list was built)
+      // gets remapped to its canonical replacement here.
+      if(Array.isArray(d.ergs) && d.ergs.length){
+        const remapped = [...new Set(d.ergs.map(erg => LEGACY_ERG_MAP[erg] || erg))];
+        const changed = remapped.length !== d.ergs.length || remapped.some((v,i) => v !== d.ergs[i]);
+        if(changed) updates.ergs = remapped;
       }
 
       if(Object.keys(updates).length){
