@@ -1136,6 +1136,7 @@ document.getElementById("btnAddEmployee").addEventListener("click", ()=>{
    DIRECTORY (Search + Chip Filters + Cards) — Section 12/13
 ========================================================= */
 let activeChips = { school:new Set(), location:new Set(), interests:new Set(), careerGoals:new Set(), ergs:new Set() };
+let expandedChipGroups = { school:false, location:false, interests:false, careerGoals:false, ergs:false };
 
 function rebuildChipFilters(){
   const groups = [
@@ -1149,10 +1150,27 @@ function rebuildChipFilters(){
   wrap.innerHTML = "";
   groups.forEach(g=>{
     if(!g.values.length) return;
-    const label = document.createElement("div");
-    label.className = "chip-group-label";
-    label.textContent = g.label;
-    wrap.appendChild(label);
+    const activeCount = activeChips[g.key].size;
+    const isOpen = expandedChipGroups[g.key];
+
+    const header = document.createElement("button");
+    header.type = "button";
+    header.className = "chip-group-label";
+    header.style.cssText = "display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:0;width:100%;text-align:left;";
+    header.innerHTML = `
+      <span style="display:inline-block;transition:transform .15s ease;transform:rotate(${isOpen ? "90deg" : "0deg"});">▸</span>
+      <span>${g.label}</span>
+      <span style="font-weight:400;color:var(--ink-soft);text-transform:none;letter-spacing:0;">(${g.values.length})</span>
+      ${activeCount ? `<span class="tag" style="background:var(--blue);color:#fff;font-size:10px;padding:2px 7px;">${activeCount} selected</span>` : ""}
+    `;
+    header.addEventListener("click", ()=>{
+      expandedChipGroups[g.key] = !expandedChipGroups[g.key];
+      rebuildChipFilters();
+    });
+    wrap.appendChild(header);
+
+    if(!isOpen) return;
+
     const row = document.createElement("div");
     row.className = "chips";
     g.values.forEach(v=>{
