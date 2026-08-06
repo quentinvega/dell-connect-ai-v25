@@ -128,10 +128,15 @@
   .emp-actions{display:flex;gap:8px;}
 
   .score-badge{background:var(--blue);color:#fff;font-weight:800;font-size:15px;border-radius:10px;padding:8px 10px;text-align:center;min-width:58px;}
-  .rec-card{display:flex;gap:16px;align-items:flex-start;}
   .rec-main{flex:1;}
-  .why-list{list-style:none;margin:10px 0 0 0;padding:0;font-size:12.5px;color:var(--ink);}
-  .why-list li{margin-bottom:5px;}
+  #recList{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:4px;}
+  @media(max-width:1100px){#recList{grid-template-columns:1fr 1fr;}}
+  @media(max-width:640px){#recList{grid-template-columns:1fr;}}
+  .rec-card{padding:16px;position:relative;}
+  .rec-card.top-pick{border:1.5px solid var(--blue);box-shadow:0 2px 10px rgba(0,118,206,.14);}
+  .top-pick-ribbon{position:absolute;top:-9px;right:14px;background:linear-gradient(135deg,var(--blue),var(--blue-dark));color:#fff;font-size:10px;font-weight:800;letter-spacing:.03em;padding:3px 10px;border-radius:999px;box-shadow:0 2px 6px rgba(0,0,0,.15);}
+  .why-list{list-style:none;margin:8px 0 0 0;padding:0;font-size:12px;color:var(--ink);}
+  .why-list li{margin-bottom:4px;}
   .why-list li:before{content:"✓ ";color:var(--green);font-weight:800;}
 
   .intro-box{background:#FBFCFE;border:1px dashed var(--border);border-radius:10px;padding:14px;margin-top:12px;font-size:13px;line-height:1.65;white-space:pre-wrap;display:none;}
@@ -168,6 +173,15 @@
   .modal-row:last-child{border-bottom:none;}
   .modal-row-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:4px;}
   .modal-row-value{font-size:13.5px;color:var(--ink);}
+
+  .chat-bubble{max-width:78%;padding:9px 13px;border-radius:14px;font-size:13px;line-height:1.4;word-break:break-word;}
+  .chat-bubble.mine{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:4px;}
+  .chat-bubble.theirs{align-self:flex-start;background:var(--accent);color:var(--ink);border-bottom-left-radius:4px;}
+  .chat-timestamp{font-size:10px;color:var(--ink-soft);margin-top:2px;}
+  .conversation-row{display:flex;align-items:center;gap:12px;padding:12px 6px;border-bottom:1px solid var(--border);cursor:pointer;}
+  .conversation-row:last-child{border-bottom:none;}
+  .conversation-row:hover{background:#FBFCFE;}
+  .conversation-preview{font-size:12px;color:var(--ink-soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px;}
   .toast.show{opacity:1;transform:none;}
 </style>
 </head>
@@ -231,6 +245,7 @@
       <div class="nav-item" data-section="aisearch"><span class="ic">✦</span> AI Search</div>
       <div class="nav-item" data-section="recommendations"><span class="ic">◈</span> Match Recommendations</div>
       <div class="nav-item" data-section="ergs"><span class="ic">◎</span> ERGs</div>
+      <div class="nav-item" data-section="messages"><span class="ic">✉</span> Messages</div>
     </nav>
     <div id="authArea" style="margin-top:18px;padding:14px;background:rgba(255,255,255,.10);border-radius:12px;font-size:12.5px;color:rgba(255,255,255,.9);"></div>
     <div class="sidebar-footer">Dell has 100,000+ employees — but no smart way to find the ones you'd actually want to connect with. Now you do.</div>
@@ -381,12 +396,37 @@
       </div>
     </section>
 
+    <!-- MESSAGES -->
+    <section class="section" id="section-messages">
+      <div class="topbar">
+        <div>
+          <p class="page-title">Messages</p>
+          <p class="page-sub">Direct messages with people you've connected with in the directory.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div id="conversationsList"></div>
+      </div>
+    </section>
+
   </main>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <datalist id="schoolDatalist"></datalist>
+
+<div id="chatModal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:420px;display:flex;flex-direction:column;max-height:80vh;">
+    <button class="modal-close" id="chatModalClose" aria-label="Close">&times;</button>
+    <div id="chatModalHeader" style="display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:12px;flex-shrink:0;"></div>
+    <div id="chatMessages" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:2px 2px 8px 2px;"></div>
+    <div style="display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--border);flex-shrink:0;">
+      <input type="text" id="chatMessageInput" placeholder="Type a message..." style="flex:1;padding:9px 12px;border:1px solid var(--border);border-radius:9px;font-size:13px;">
+      <button class="btn btn-primary btn-sm" id="chatSendBtn">Send</button>
+    </div>
+  </div>
+</div>
 
 <div id="profileModal" class="modal-overlay" style="display:none;">
   <div class="modal-card">
@@ -493,7 +533,7 @@ let profile = {
   hometownCity:"", hometownState:"", hometownCountry:"", hometownRegion:"",
   locationCity:"", locationState:"", locationCountry:"", locationRegion:"",
   photoUrl:"", previousDellTeam:[],
-  skills:[], interests:[], languages:[], certifications:[], ergs:[], careerGoals:[], openToConnectAbout:[], mentorAvailable:false, wantsMentor:false,
+  skills:[], interests:[], languages:[], certifications:[], outsideGroups:[], ergs:[], careerGoals:[], openToConnectAbout:[], mentorAvailable:false, wantsMentor:false,
   programs:{fdp:false, frp:false, adp:false, fap:false, flp:false}, rotations:{fdp:[], frp:[], adp:[], fap:[], flp:[]},
   alumni:{fdp:false, frp:false, adp:false, fap:false, flp:false}, alumniRotations:{fdp:[], frp:[], adp:[], fap:[], flp:[]}
 };
@@ -652,6 +692,7 @@ function goto(section){
   if(section==="directory") renderDirectory();
   if(section==="recommendations") renderRecommendations();
   if(section==="ergs") renderERGs();
+  if(section==="messages") renderConversationsList();
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -667,6 +708,13 @@ const FORM_SECTIONS = [
       {key:"email", label:"Email", placeholder:"name@dell.com"},
     ],
     special: "photo",
+  },
+  {
+    title: "Interests & Hobbies",
+    fields: [
+      {key:"interests", label:"Interests", placeholder:"Basketball, Investing, Pickleball", list:true},
+      {key:"outsideGroups", label:"Groups Outside of Dell", placeholder:"Book Club, Food Drive, Run Club", list:true},
+    ],
   },
   {
     title: "Current Role at Dell",
@@ -696,12 +744,6 @@ const FORM_SECTIONS = [
       {key:"languages", label:"Languages Spoken", placeholder:"Spanish, Mandarin", list:true},
     ],
     special: "hometownLocation",
-  },
-  {
-    title: "Interests & Hobbies",
-    fields: [
-      {key:"interests", label:"Interests", placeholder:"Basketball, Investing, Pickleball", list:true},
-    ],
   },
   {
     title: "Skills & Career",
@@ -873,15 +915,23 @@ function appendProgramsWidget(sectionDiv, prefix, source){
   const rotations = (source && source.rotations) || {fdp:[], frp:[], adp:[], fap:[], flp:[]};
   const alumni = (source && source.alumni) || {fdp:false, frp:false, adp:false, fap:false, flp:false};
   const alumniRotations = (source && source.alumniRotations) || {fdp:[], frp:[], adp:[], fap:[], flp:[]};
+  const anyChecked = PROGRAM_DEFS.some(p => programs[p.key] || alumni[p.key]);
   const div = document.createElement("div");
   div.className = "field";
   div.style.gridColumn = "1 / -1";
-  div.innerHTML = `<label>Development Programs</label>
-    <div style="display:flex;flex-direction:column;gap:10px;">
+  div.innerHTML = `
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px;">
+      <input type="checkbox" id="${prefix}DevProgramToggle" style="width:15px;height:15px;" ${anyChecked ? "checked" : ""}>
+      <span style="font-weight:600;color:var(--ink-soft);font-size:12.5px;">In a Development Program?</span>
+    </label>
+    <div id="${prefix}DevProgramList" style="display:${anyChecked ? "flex" : "none"};flex-direction:column;gap:10px;">
       ${PROGRAM_DEFS.map(p => programBlockHTML(prefix, p.key, p.label, programs[p.key], rotations[p.key], p.hasRotations, alumni[p.key], alumniRotations[p.key])).join("")}
     </div>`;
   sectionDiv.appendChild(div);
   wireProgramCheckboxes(prefix);
+  document.getElementById(`${prefix}DevProgramToggle`).addEventListener("change", (ev)=>{
+    document.getElementById(`${prefix}DevProgramList`).style.display = ev.target.checked ? "flex" : "none";
+  });
 }
 
 function appendCommunityWidget(sectionDiv, prefix, source){
@@ -1093,7 +1143,7 @@ document.getElementById("btnAddEmployee").addEventListener("click", ()=>{
     previousEmployer:"",
     photoUrl:pendingNewEmployeePhoto||"",
     previousDellTeam:csvToArr(data.previousDellTeam), skills:csvToArr(data.skills), interests:csvToArr(data.interests),
-    languages:csvToArr(data.languages), certifications:csvToArr(data.certifications),
+    languages:csvToArr(data.languages), certifications:csvToArr(data.certifications), outsideGroups:csvToArr(data.outsideGroups),
     ergs: getCheckedErgs("newEmpErgCheckboxes"), careerGoals:csvToArr(data.careerGoals),
     openToConnectAbout: csvToArr(data.openToConnectAbout),
     mentorAvailable: document.getElementById("newEmpMentorCheckbox").checked,
@@ -1237,7 +1287,7 @@ function textSearchMatch(e, q){
   const haystack = [
     e.name, e.email, e.currentRole, e.currentTeam, e.school,
     e.hometownCity, e.hometownState, e.locationCity, e.locationState, ...asArray(e.previousDellTeam), e.joinYear,
-    ...asArray(e.skills), ...asArray(e.interests), ...asArray(e.ergs), ...asArray(e.careerGoals),
+    ...asArray(e.skills), ...asArray(e.interests), ...asArray(e.outsideGroups), ...asArray(e.ergs), ...asArray(e.careerGoals),
     ...employeeProgramValues(e)
   ].join(" ");
   return containsToken(haystack, q);
@@ -1264,6 +1314,7 @@ function buildProfileModalHTML(e){
         <p class="modal-role">${[e.currentRole, e.currentTeam].filter(Boolean).join(" · ") || "—"}</p>
       </div>
     </div>
+    ${canMessage(e) ? `<button class="btn btn-primary btn-sm" id="modalMessageBtn" style="width:100%;justify-content:center;margin-bottom:14px;">✉ Message ${e.name.split(" ")[0]}</button>` : ""}
     ${modalRow("Email", e.email ? `<a href="mailto:${e.email}" style="color:var(--blue);">${e.email}</a>` : "")}
     ${modalRow("School", schoolLine)}
     ${modalRow("Year Joined Dell", e.joinYear)}
@@ -1274,6 +1325,7 @@ function buildProfileModalHTML(e){
     ${modalTagRow("Interests", e.interests)}
     ${modalTagRow("Languages", e.languages)}
     ${modalTagRow("Certifications", e.certifications)}
+    ${modalTagRow("Groups Outside of Dell", e.outsideGroups)}
     ${modalTagRow("ERGs", e.ergs)}
     ${modalTagRow("Career Goals", e.careerGoals)}
     ${modalTagRow("Open To Connect About", e.openToConnectAbout)}
@@ -1310,6 +1362,13 @@ function openProfileModal(id){
   if(!target){ showToast("Couldn't find that profile"); return; }
   document.getElementById("profileModalBody").innerHTML = buildProfileModalHTML(target);
   document.getElementById("profileModal").style.display = "flex";
+  const msgBtn = document.getElementById("modalMessageBtn");
+  if(msgBtn){
+    msgBtn.addEventListener("click", ()=>{
+      closeProfileModal();
+      openConversationWith(target);
+    });
+  }
 }
 function closeProfileModal(){
   document.getElementById("profileModal").style.display = "none";
@@ -1321,6 +1380,159 @@ document.getElementById("profileModal").addEventListener("click", (ev)=>{
 document.addEventListener("keydown", (ev)=>{
   if(ev.key === "Escape") closeProfileModal();
 });
+
+/* =========================================================
+   MESSAGES / DIRECT MESSAGES
+   Conversations are keyed by a deterministic pair of Firebase Auth UIDs
+   (not employee record ids, since that's what Firestore rules can actually
+   verify via request.auth.uid). Each conversation is one document holding an
+   embedded messages array — simple, atomic appends via arrayUnion, and no
+   composite index needed since the list is sorted client-side.
+========================================================= */
+function escapeHtml(str){
+  const div = document.createElement("div");
+  div.textContent = str == null ? "" : str;
+  return div.innerHTML;
+}
+function conversationIdFor(uidA, uidB){
+  return [uidA, uidB].sort().join("_");
+}
+function canMessage(e){
+  // Can only DM real signed-in account holders (someone with a createdBy uid
+  // on record), not unclaimed seed profiles, and not yourself.
+  return !!(FIREBASE_CONFIGURED && currentUser && e.createdBy && e.createdBy !== currentUser.uid);
+}
+
+let activeConversationId = null;
+let activeConversationUnsub = null;
+
+function openConversationWith(target){
+  if(!auth || !currentUser){ showToast("Sign in to send messages"); return; }
+  if(!target.createdBy){ showToast("This person hasn't signed in yet, so they can't be messaged."); return; }
+  if(target.createdBy === currentUser.uid) return;
+
+  activeConversationId = conversationIdFor(currentUser.uid, target.createdBy);
+
+  document.getElementById("chatModalHeader").innerHTML = `
+    ${avatarHTML(target)}
+    <div><p style="font-weight:700;font-size:14px;margin:0;">${target.name}</p><p style="font-size:12px;color:var(--ink-soft);margin:2px 0 0 0;">${target.currentRole||""}</p></div>
+  `;
+  document.getElementById("chatMessages").innerHTML = `<div style="text-align:center;color:var(--ink-soft);font-size:12px;padding:20px 0;">Loading messages...</div>`;
+  document.getElementById("chatModal").style.display = "flex";
+
+  const convoRef = db.collection("conversations").doc(activeConversationId);
+  convoRef.set({
+    participantUids: [currentUser.uid, target.createdBy],
+    participantNames: { [currentUser.uid]: profile.name || currentUser.email, [target.createdBy]: target.name },
+    updatedAt: Date.now(),
+  }, { merge: true }).catch(err => console.error("Couldn't start conversation:", err));
+
+  if(activeConversationUnsub) activeConversationUnsub();
+  activeConversationUnsub = convoRef.onSnapshot(doc=>{
+    const data = doc.data();
+    const messages = (data && data.messages) || [];
+    const box = document.getElementById("chatMessages");
+    box.innerHTML = messages.length ? messages.map(m=>{
+      const mine = m.senderUid === currentUser.uid;
+      const time = m.timestamp ? new Date(m.timestamp).toLocaleString([], {month:"short", day:"numeric", hour:"numeric", minute:"2-digit"}) : "";
+      return `<div style="display:flex;flex-direction:column;${mine ? "align-items:flex-end;" : "align-items:flex-start;"}">
+        <div class="chat-bubble ${mine ? "mine" : "theirs"}">${escapeHtml(m.text)}</div>
+        <div class="chat-timestamp">${time}</div>
+      </div>`;
+    }).join("") : `<div style="text-align:center;color:var(--ink-soft);font-size:12px;padding:20px 0;">Say hello 👋</div>`;
+    box.scrollTop = box.scrollHeight;
+  }, err=>{
+    console.error("Conversation sync failed:", err);
+    document.getElementById("chatMessages").innerHTML = `<div style="text-align:center;color:#C0392B;font-size:12px;padding:20px 0;">Couldn't load messages.</div>`;
+  });
+}
+
+function closeChatModal(){
+  document.getElementById("chatModal").style.display = "none";
+  if(activeConversationUnsub){ activeConversationUnsub(); activeConversationUnsub = null; }
+  activeConversationId = null;
+}
+document.getElementById("chatModalClose").addEventListener("click", closeChatModal);
+document.getElementById("chatModal").addEventListener("click", (ev)=>{
+  if(ev.target.id === "chatModal") closeChatModal();
+});
+
+function sendChatMessage(){
+  const input = document.getElementById("chatMessageInput");
+  const text = input.value.trim();
+  if(!text || !activeConversationId || !db) return;
+  input.value = "";
+  const convoRef = db.collection("conversations").doc(activeConversationId);
+  convoRef.set({
+    messages: firebase.firestore.FieldValue.arrayUnion({
+      senderUid: currentUser.uid,
+      senderName: profile.name || currentUser.email,
+      text: text,
+      timestamp: Date.now(),
+    }),
+    updatedAt: Date.now(),
+  }, { merge: true }).catch(err=>{
+    console.error("Send failed:", err);
+    showToast("Message failed to send");
+  });
+}
+document.getElementById("chatSendBtn").addEventListener("click", sendChatMessage);
+document.getElementById("chatMessageInput").addEventListener("keydown", (ev)=>{
+  if(ev.key === "Enter") sendChatMessage();
+});
+
+let conversationsUnsub = null;
+function renderConversationsList(){
+  const wrap = document.getElementById("conversationsList");
+  if(!wrap) return;
+  if(!FIREBASE_CONFIGURED){
+    wrap.innerHTML = `<div class="empty-state">Messaging needs Firebase sync configured to work, since it requires a shared backend.</div>`;
+    return;
+  }
+  if(!currentUser){
+    wrap.innerHTML = `<div class="empty-state">Sign in to see your messages.</div>`;
+    return;
+  }
+  if(!db){
+    wrap.innerHTML = `<div class="empty-state">Connecting...</div>`;
+    return;
+  }
+  if(conversationsUnsub) conversationsUnsub();
+  conversationsUnsub = db.collection("conversations")
+    .where("participantUids", "array-contains", currentUser.uid)
+    .onSnapshot(snapshot=>{
+      const convos = snapshot.docs.map(d=>({ id: d.id, ...d.data() }))
+        .sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+      if(!convos.length){
+        wrap.innerHTML = `<div class="empty-state">No conversations yet — open someone's profile in the Directory and click Message to start one.</div>`;
+        return;
+      }
+      wrap.innerHTML = convos.map(c=>{
+        const otherUid = c.participantUids.find(u=>u!==currentUser.uid);
+        const otherName = (c.participantNames && c.participantNames[otherUid]) || "Unknown";
+        const messages = c.messages || [];
+        const last = messages[messages.length-1];
+        const preview = last ? `${last.senderUid===currentUser.uid ? "You: " : ""}${escapeHtml(last.text)}` : "No messages yet";
+        return `<div class="conversation-row" data-other-uid="${otherUid}" data-other-name="${otherName.replace(/"/g,'&quot;')}">
+          <div class="avatar" style="width:40px;height:40px;">${SILHOUETTE_ICON}</div>
+          <div style="flex:1;min-width:0;">
+            <p style="font-weight:700;font-size:13.5px;margin:0;">${otherName}</p>
+            <p class="conversation-preview">${preview}</p>
+          </div>
+        </div>`;
+      }).join("");
+      wrap.querySelectorAll(".conversation-row").forEach(row=>{
+        row.addEventListener("click", ()=>{
+          const otherUid = row.dataset.otherUid;
+          const target = employees.find(e => e.createdBy === otherUid) || { name: row.dataset.otherName, createdBy: otherUid, currentRole:"" };
+          openConversationWith(target);
+        });
+      });
+    }, err=>{
+      console.error("Conversations list failed:", err);
+      wrap.innerHTML = `<div class="empty-state" style="color:#C0392B;">Couldn't load conversations.</div>`;
+    });
+}
 
 function empCardHTML(e, opts){
   opts = opts || {};
@@ -1390,6 +1602,7 @@ function buildVocab(){
     currentTeam: uniqueVals(e=>[e.currentTeam, ...asArray(e.previousDellTeam)]),
     currentRole: uniqueVals(e=>e.currentRole),
     interests: uniqueVals(e=>e.interests),
+    outsideGroups: uniqueVals(e=>e.outsideGroups),
     ergs: uniqueVals(e=>e.ergs),
     careerGoals: uniqueVals(e=>e.careerGoals),
     skills: uniqueVals(e=>e.skills).filter(v => !EXCLUDED_SKILL_TERMS.includes(v.toLowerCase())),
@@ -1519,7 +1732,7 @@ function buildWordMap(vocab, cat){
 function interpretQuery(query){
   const q = " " + query.toLowerCase() + " ";
   const vocab = buildVocab();
-  const matched = { school:[], location:[], currentTeam:[], currentRole:[], interests:[], ergs:[], careerGoals:[], skills:[], programs:[] };
+  const matched = { school:[], location:[], currentTeam:[], currentRole:[], interests:[], outsideGroups:[], ergs:[], careerGoals:[], skills:[], programs:[] };
 
   // One flat list across every category, longest phrase first. A longer match claims
   // its full character span in the query; any shorter match whose span falls inside
@@ -1640,6 +1853,7 @@ function runAISearch(query, interp){
     if(matched.currentTeam.length) checks.push(fieldMatchesAny(e.currentTeam, matched.currentTeam) || asArray(e.previousDellTeam).some(t=>fieldMatchesAny(t, matched.currentTeam)));
     if(matched.currentRole.length) checks.push(fieldMatchesAny(e.currentRole, matched.currentRole));
     if(matched.interests.length) checks.push(e.interests.some(i=>fieldMatchesAny(i, matched.interests)));
+    if(matched.outsideGroups.length) checks.push(asArray(e.outsideGroups).some(i=>fieldMatchesAny(i, matched.outsideGroups)));
     if(matched.ergs.length) checks.push(e.ergs.some(i=>fieldMatchesAny(i, matched.ergs)));
     if(matched.careerGoals.length) checks.push(e.careerGoals.some(i=>fieldMatchesAny(i, matched.careerGoals)));
     if(matched.skills.length) checks.push(e.skills.some(i=>fieldMatchesAny(i, matched.skills)));
@@ -1674,7 +1888,7 @@ function renderAISearch(){
     const interp = interpretQuery(query);
     const results = runAISearch(query, interp);
 
-    const labelMap = {school:"School", location:"Location", currentTeam:"Team", currentRole:"Role", interests:"Interest", ergs:"ERG", careerGoals:"Career Goal", skills:"Skill", programs:"Program"};
+    const labelMap = {school:"School", location:"Location", currentTeam:"Team", currentRole:"Role", interests:"Interest", outsideGroups:"Outside Group", ergs:"ERG", careerGoals:"Career Goal", skills:"Skill", programs:"Program"};
     let tags = [];
     Object.keys(interp.matched).forEach(cat=>{
       if(interp.matched[cat].length){
@@ -1766,36 +1980,40 @@ ${you}`;
 function renderRecommendations(){
   const list = document.getElementById("recList");
   if(!profile.name && !profile.school && !asArray(profile.interests).length){
+    list.style.display = "block";
     list.innerHTML = `<div class="card"><div class="empty-state">Fill out <b>My Profile</b> first — recommendations are built entirely from your school, interests, skills, career goals, and ERGs.</div></div>`;
     return;
   }
+  list.style.display = "grid";
   const ranked = employees
     .filter(e=>String(e.id) !== String(myEmployeeId))
     .map(e=>({ e, ...computeMatch(e) }))
     .sort((a,b)=>b.score-a.score)
-    .slice(0,5);
+    .slice(0,9);
 
-  list.innerHTML = ranked.map(({e, score, reasons})=>`
-    <div class="card rec-card">
-      <div class="score-badge">${score}%</div>
-      <div class="rec-main">
-        <div class="emp-head" style="margin-bottom:6px;cursor:pointer;" data-action="view" data-id="${e.id}">
-          ${avatarHTML(e)}
-          <div>
-            <p class="emp-name">${e.name}</p>
-            <p class="emp-role">${e.currentRole || "—"} · ${e.currentTeam || "—"}</p>
-          </div>
+  list.innerHTML = ranked.map(({e, reasons}, idx)=>{
+    const isTop = idx === 0;
+    const shownReasons = reasons.slice(0,3);
+    const extraCount = reasons.length - shownReasons.length;
+    return `
+    <div class="card rec-card${isTop ? " top-pick" : ""}">
+      ${isTop ? `<div class="top-pick-ribbon">✨ Top Pick</div>` : ""}
+      <div class="emp-head" style="margin-bottom:6px;cursor:pointer;" data-action="view" data-id="${e.id}">
+        ${avatarHTML(e)}
+        <div>
+          <p class="emp-name">${e.name}</p>
+          <p class="emp-role">${e.currentRole || "—"} · ${e.currentTeam || "—"}</p>
         </div>
-        <p class="card-sub" style="margin-bottom:0;">Why We Matched</p>
-        <ul class="why-list">${reasons.length ? reasons.map(r=>`<li>${r}</li>`).join("") : "<li>New connection to explore</li>"}</ul>
-        <div class="emp-actions" style="margin-top:12px;">
-          <a class="btn btn-ghost btn-sm" href="mailto:${e.email||''}">✉ Email</a>
-          <button class="btn btn-primary btn-sm gen-intro-btn">Generate Introduction</button>
-        </div>
-        <div class="intro-box"></div>
       </div>
+      <ul class="why-list">${shownReasons.length ? shownReasons.map(r=>`<li>${r}</li>`).join("") : "<li>New connection to explore</li>"}${extraCount > 0 ? `<li style="color:var(--ink-soft);">+${extraCount} more reason${extraCount===1?"":"s"}</li>` : ""}</ul>
+      <div class="emp-actions" style="margin-top:10px;">
+        <a class="btn btn-ghost btn-sm" href="mailto:${e.email||''}">✉ Email</a>
+        <button class="btn btn-primary btn-sm gen-intro-btn">Intro</button>
+      </div>
+      <div class="intro-box"></div>
     </div>
-  `).join("");
+  `;
+  }).join("");
 
   document.querySelectorAll(".gen-intro-btn").forEach((btn, idx)=>{
     btn.addEventListener("click", ()=>{
@@ -2334,7 +2552,7 @@ function syncProfileToDirectory(){
     locationCountry: profile.locationCountry, locationRegion: profile.locationRegion,
     previousEmployer: "",
     previousDellTeam: profile.previousDellTeam, skills: profile.skills, interests: profile.interests,
-    languages: profile.languages, certifications: profile.certifications,
+    languages: profile.languages, certifications: profile.certifications, outsideGroups: profile.outsideGroups,
     ergs: profile.ergs, careerGoals: profile.careerGoals, openToConnectAbout: profile.openToConnectAbout,
     mentorAvailable: profile.mentorAvailable, wantsMentor: profile.wantsMentor, programs: profile.programs, rotations: profile.rotations, alumni: profile.alumni, alumniRotations: profile.alumniRotations,
     photoUrl: profile.photoUrl,
